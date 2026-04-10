@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Disc3, Send, Clock, Trophy, Check, Sparkles } from 'lucide-react';
+import { Disc3, Send, Clock, Trophy, Check, Sparkles, Lightbulb, RefreshCw, AlertCircle } from 'lucide-react';
 
 export function Game() {
   const { room, currentTrack, roundEndTime, isTimerStarted, roundGuessTarget, actions } = useGameStore();
   const [guess, setGuess] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [hasGuessed, setHasGuessed] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [imgLoading, setImgLoading] = useState(true);
+  const [imgRetryKey, setImgRetryKey] = useState(0);
   const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -24,6 +27,8 @@ export function Game() {
     if (currentTrack) {
       setHasGuessed(false);
       setGuess('');
+      setImgError(false);
+      setImgLoading(true);
     }
   }, [currentTrack]);
 
@@ -207,19 +212,85 @@ export function Game() {
                   {/* Clue Display */}
                   {currentTrack.imageUrl && (
                     <motion.div 
+                      key={`clue-img-${currentTrack.imageUrl}-${imgRetryKey}`}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="w-full aspect-video rounded-3xl overflow-hidden mb-8 border border-white/10 shadow-2xl relative group"
+                      className="w-full aspect-video rounded-3xl overflow-hidden mb-8 border border-white/10 shadow-2xl relative group bg-black/40 flex items-center justify-center"
                     >
-                      <img 
-                        src={currentTrack.imageUrl} 
-                        alt="Clue" 
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      {imgLoading && !imgError && (
+                        <div className="absolute inset-0 flex items-center justify-center z-20 bg-[#151619]/60 backdrop-blur-sm">
+                          <RefreshCw className="text-[#1DB954] animate-spin" size={40} />
+                        </div>
+                      )}
+                      
+                      {imgError ? (
+                        <div className="flex flex-col items-center gap-4 p-8 text-center">
+                          <AlertCircle className="text-red-500" size={48} />
+                          <div>
+                            <p className="text-white font-bold">Image failed to load</p>
+                            <p className="text-white/40 text-sm">The transmission signal is weak</p>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setImgError(false);
+                              setImgLoading(true);
+                              setImgRetryKey(prev => prev + 1);
+                            }}
+                            className="bg-white/10 hover:bg-white/20 px-6 py-2 rounded-full text-xs font-mono uppercase tracking-widest transition-colors flex items-center gap-2"
+                          >
+                            <RefreshCw size={14} /> Retry Signal
+                          </button>
+                        </div>
+                      ) : (
+                        <img 
+                          src={currentTrack.imageUrl.includes('loremflickr') 
+                            ? `https://images.weserv.nl/?url=${currentTrack.imageUrl.replace('https://', '')}&w=800&h=600&fit=cover`
+                            : currentTrack.imageUrl
+                          } 
+                          alt="Clue" 
+                          className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
+                          onLoad={() => {
+                            console.log("Image loaded:", currentTrack.imageUrl);
+                            setImgLoading(false);
+                          }}
+                          onError={(e) => {
+                            console.error("Image failed to load:", currentTrack.imageUrl);
+                            if (currentTrack.imageUrl?.includes('loremflickr')) {
+                              // Try picsum fallback immediately
+                              const fallback = `https://picsum.photos/seed/${encodeURIComponent(currentTrack.imageUrl)}/800/600`;
+                              (e.target as HTMLImageElement).src = fallback;
+                            } else {
+                              setImgError(true);
+                              setImgLoading(false);
+                            }
+                          }}
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
                     </motion.div>
                   )}
+
+                  {/* Hint Display */}
+                  <AnimatePresence>
+                    {currentTrack.hint && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        animate={{ opacity: 1, height: 'auto', marginBottom: 32 }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        className="w-full"
+                      >
+                        <div className="bg-[#1DB954]/10 border border-[#1DB954]/30 p-4 rounded-2xl flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-[#1DB954] flex items-center justify-center text-black shadow-[0_0_15px_rgba(29,185,84,0.4)]">
+                            <Lightbulb size={20} />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-mono uppercase tracking-widest text-[#1DB954]">Intelligence Hint</p>
+                            <p className="text-white font-medium">{currentTrack.hint}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {currentTrack.description && (
                     <motion.div 
@@ -261,24 +332,43 @@ export function Game() {
                       ))}
                     </div>
                   ) : (
-                    <form onSubmit={handleSubmit} className="relative group w-full max-w-lg">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-[#1DB954]/20 to-transparent rounded-[2.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                      <input
-                        type="text"
-                        value={guess}
-                        onChange={(e) => setGuess(e.target.value)}
-                        placeholder={placeholderText}
-                        className="relative w-full bg-black/60 border-2 border-white/10 rounded-[2rem] px-8 py-6 text-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#1DB954] transition-all"
-                        autoFocus
-                      />
-                      <button 
-                        type="submit"
-                        disabled={!guess.trim()}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#1DB954] hover:bg-[#1ed760] text-black p-4 rounded-2xl disabled:opacity-30 transition-all shadow-xl"
-                      >
-                        <Send size={24} />
-                      </button>
-                    </form>
+                    <div className="flex flex-col items-center gap-6 w-full max-w-lg">
+                      <form onSubmit={handleSubmit} className="relative group w-full">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-[#1DB954]/20 to-transparent rounded-[2.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                        <input
+                          type="text"
+                          value={guess}
+                          onChange={(e) => setGuess(e.target.value)}
+                          placeholder={placeholderText}
+                          className="relative w-full bg-black/60 border-2 border-white/10 rounded-[2rem] px-8 py-6 text-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#1DB954] transition-all"
+                          autoFocus
+                        />
+                        <button 
+                          type="submit"
+                          disabled={!guess.trim()}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#1DB954] hover:bg-[#1ed760] text-black p-4 rounded-2xl disabled:opacity-30 transition-all shadow-xl"
+                        >
+                          <Send size={24} />
+                        </button>
+                      </form>
+
+                      {/* Hint Button */}
+                      {!currentTrack.hint && (
+                        <button
+                          onClick={() => actions.getHint()}
+                          disabled={currentTrack.hintsUsed !== undefined && currentTrack.maxHints !== undefined && currentTrack.hintsUsed >= currentTrack.maxHints}
+                          className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#1DB954]/50 transition-all group disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <Lightbulb className="text-[#1DB954] group-hover:animate-pulse" size={18} />
+                          <span className="text-sm font-medium text-white/60 group-hover:text-white">Request Hint</span>
+                          {currentTrack.hintsUsed !== undefined && currentTrack.maxHints !== undefined && (
+                            <span className="ml-2 px-2 py-0.5 rounded-full bg-black/40 text-[10px] font-mono text-[#1DB954]">
+                              {currentTrack.maxHints - currentTrack.hintsUsed} left
+                            </span>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   )}
                 </motion.div>
               ) : (

@@ -40,6 +40,7 @@ interface Room {
   gameStatus?: string;
   countdown: number;
   roundGuessTarget?: "SONG" | "ARTIST";
+  hintsUsed: number;
 }
 
 interface GameState {
@@ -60,7 +61,10 @@ interface GameState {
     duration: number; 
     startTime?: number; 
     choices?: string[]; 
-    roundGuessTarget?: "SONG" | "ARTIST" 
+    roundGuessTarget?: "SONG" | "ARTIST";
+    hint?: string;
+    hintsUsed?: number;
+    maxHints?: number;
   } | null;
   roundStartTime: number;
   roundEndTime: number;
@@ -91,6 +95,7 @@ interface GameState {
     startGame: (playlistId: string, trackIds?: string[], customTracks?: Track[]) => void;
     resetToLobby: () => void;
     submitGuess: (guess: string) => void;
+    getHint: () => void;
     clearError: () => void;
     trackPlaying: () => void;
   };
@@ -143,7 +148,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
       socket.on('round_start', (data) => {
         set({
-          currentTrack: data.track,
+          currentTrack: { ...data.track, hint: undefined },
           roundStartTime: 0,
           roundEndTime: 0,
           isTimerStarted: false,
@@ -156,6 +161,17 @@ export const useGameStore = create<GameState>((set, get) => ({
           countdown: null,
           gameStatus: null
         });
+      });
+
+      socket.on('hint_revealed', (data) => {
+        set((state) => ({
+          currentTrack: state.currentTrack ? { 
+            ...state.currentTrack, 
+            hint: data.hint,
+            hintsUsed: data.hintsUsed,
+            maxHints: data.maxHints
+          } : null
+        }));
       });
 
       socket.on('countdown_start', (count) => {
@@ -234,6 +250,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       const { socket, roomId, isTimerStarted } = get();
       if (socket && roomId && isTimerStarted) {
         socket.emit('submit_guess', { roomId, guess });
+      }
+    },
+    
+    getHint: () => {
+      const { socket, roomId, isTimerStarted } = get();
+      if (socket && roomId && isTimerStarted) {
+        socket.emit('get_hint', { roomId });
       }
     },
     

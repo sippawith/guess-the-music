@@ -5,6 +5,7 @@ import http from "http";
 import path from "path";
 import axios from "axios";
 import dotenv from "dotenv";
+import { MOVIE_CLUES, CARTOON_CLUES, LANDMARK_CLUES } from "./src/data/gameContent.ts";
 
 dotenv.config();
 
@@ -245,6 +246,7 @@ interface Room {
   currentTrackIndex: number;
   roundEndTime: number;
   roundGuessTarget?: "SONG" | "ARTIST";
+  hintsUsed: number;
   guessesThisRound: Record<string, { guess: string; time: number; correct: boolean }>;
   roundTimeout?: NodeJS.Timeout;
   bufferedPlayers: Set<string>;
@@ -392,6 +394,7 @@ io.on("connection", (socket) => {
       },
       state: "LOBBY",
       category: category || "MUSIC",
+      hintsUsed: 0,
       settings: { 
         guessTime: 15, 
         numTracks: 5, 
@@ -537,6 +540,7 @@ io.on("connection", (socket) => {
 
       room.tracks = tracks;
       room.currentTrackIndex = 0;
+      room.hintsUsed = 0;
       
       // Start countdown
       room.state = "PLAYING"; // Set to playing but with countdown
@@ -579,9 +583,12 @@ io.on("connection", (socket) => {
 
     // Send track info (WITHOUT the name/artist to prevent cheating)
     const currentTrack = room.tracks[room.currentTrackIndex];
+    console.log(`[Game] Starting round ${room.currentTrackIndex + 1} for room ${roomId}. Category: ${room.category}`);
     
-    // Determine round guess target if set to BOTH
-    if (room.settings.guessTarget === "BOTH") {
+    // Determine round guess target
+    if (room.category !== "MUSIC") {
+      room.roundGuessTarget = "SONG";
+    } else if (room.settings.guessTarget === "BOTH") {
       room.roundGuessTarget = Math.random() > 0.5 ? "SONG" : "ARTIST";
     } else {
       room.roundGuessTarget = room.settings.guessTarget;
@@ -591,17 +598,22 @@ io.on("connection", (socket) => {
     if (room.settings.gameMode === "CHOICE_4" || room.settings.gameMode === "CHOICE_5") {
       const numChoices = room.settings.gameMode === "CHOICE_5" ? 5 : 4;
       
-      const getChoiceText = (t: Track) => {
+      const getChoiceText = (t: any) => {
         if (room.roundGuessTarget === "SONG") return t.name;
         if (room.roundGuessTarget === "ARTIST") return t.artist;
         return `${t.name} - ${t.artist}`;
       };
 
       choices = [getChoiceText(currentTrack)];
-      const otherTracks = room.tracks.filter(t => t.id !== currentTrack.id);
       
-      // Get all possible unique choices from other tracks
-      const allOtherChoices = Array.from(new Set(otherTracks.map(t => getChoiceText(t))))
+      // Get decoys from the same category pool if it's a non-music category
+      let decoyPool: any[] = [];
+      if (room.category === "MOVIE") decoyPool = MOVIE_CLUES;
+      else if (room.category === "CARTOON") decoyPool = CARTOON_CLUES;
+      else if (room.category === "LANDMARK") decoyPool = LANDMARK_CLUES;
+      else decoyPool = room.tracks; // For music, use the current tracks
+
+      const allOtherChoices = Array.from(new Set(decoyPool.map(t => getChoiceText(t))))
         .filter(c => c !== choices[0]);
       
       const shuffled = allOtherChoices.sort(() => 0.5 - Math.random());
@@ -609,9 +621,11 @@ io.on("connection", (socket) => {
         choices.push(shuffled[i]);
       }
       
-      // If we still need more choices (rare), add some placeholders or random tracks
+      // If we still need more choices (rare), add some placeholders
       if (choices.length < numChoices) {
-        const placeholders = ["Unknown Track", "Mystery Artist", "Secret Song", "Hidden Track"];
+        const placeholders = room.category === "MUSIC" 
+          ? ["Unknown Track", "Mystery Artist", "Secret Song", "Hidden Track"]
+          : ["Unknown Option", "Mystery Choice", "Secret Subject", "Hidden Detail"];
         for (let i = 0; choices.length < numChoices && i < placeholders.length; i++) {
           if (!choices.includes(placeholders[i])) {
             choices.push(placeholders[i]);
@@ -620,10 +634,14 @@ io.on("connection", (socket) => {
       }
       
       choices = choices.sort(() => 0.5 - Math.random());
+      console.log(`[Game] Generated ${choices.length} choices for category ${room.category}:`, choices);
     }
 
     const trackDataForClients = {
       previewUrl: currentTrack.previewUrl,
+      imageUrl: currentTrack.imageUrl,
+      description: currentTrack.description,
+      albumArt: currentTrack.albumArt,
       duration: room.settings.guessTime,
       startTime: currentTrack.startTime || 30,
       choices,
@@ -718,6 +736,43 @@ io.on("connection", (socket) => {
       if (room.roundTimeout) clearTimeout(room.roundTimeout);
       endRound(roomId);
     }
+  });
+
+  socket.on("get_hint", ({ roomId }) => {
+    const room = rooms[roomId];
+    if (!room || room.state !== "PLAYING") return;
+
+    const maxHints = Math.max(1, Math.floor(room.tracks.length * 0.3));
+    if (room.hintsUsed >= maxHints) {
+      socket.emit("error", "No hints remaining!");
+      return;
+    }
+
+    const currentTrack = room.tracks[room.currentTrackIndex];
+    const target = room.roundGuessTarget;
+    
+    let hint = "";
+    if (room.category === "MUSIC") {
+      if (target === "SONG") {
+        hint = `Artist: ${currentTrack.artist}`;
+      } else if (target === "ARTIST") {
+        hint = `Song: ${currentTrack.name}`;
+      } else {
+        hint = `It's by ${currentTrack.artist}`;
+      }
+    } else {
+      // For movies/cartoons/landmarks, reveal the "artist" (director/creator/region)
+      if (currentTrack.artist) {
+        hint = `Related to: ${currentTrack.artist}`;
+      } else {
+        const name = currentTrack.name;
+        hint = `Starts with: ${name.substring(0, 2)}...`;
+      }
+    }
+
+    room.hintsUsed++;
+    io.to(roomId).emit("hint_revealed", { hint, hintsUsed: room.hintsUsed, maxHints });
+    io.to(roomId).emit("room_update", room);
   });
 
   function endRound(roomId: string) {

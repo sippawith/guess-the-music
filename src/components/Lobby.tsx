@@ -119,15 +119,23 @@ export function Lobby() {
           const shuffled = sourceList.sort(() => Math.random() - 0.5);
           const selected = shuffled.slice(0, room.settings.numTracks || 5);
 
-          const customTracks = selected.map((c: any, i: number) => ({
-            id: `clue-${i}-${Date.now()}`,
-            name: c.name,
-            artist: c.artist,
-            description: c.description,
-            imageUrl: `https://loremflickr.com/800/600/${encodeURIComponent(c.imageUrl || c.name)}`,
-            previewUrl: "",
-            albumArt: ""
-          }));
+          const customTracks = selected.map((c: any, i: number) => {
+            // Use a more robust image URL with fallback and category context
+            const categoryKeyword = room.category.toLowerCase();
+            const searchTerms = encodeURIComponent(`${c.imageUrl || c.name} ${categoryKeyword}`);
+            // Use weserv.nl as a proxy to help with image loading and SSL/Referrer issues
+            const imgUrl = `https://images.weserv.nl/?url=loremflickr.com/800/600/${searchTerms}?lock=${i}-${Date.now()}&w=800&h=600&fit=cover`;
+            
+            return {
+              id: `clue-${i}-${Date.now()}`,
+              name: c.name,
+              artist: c.artist,
+              description: c.description,
+              imageUrl: imgUrl,
+              previewUrl: "",
+              albumArt: imgUrl
+            };
+          });
 
           actions.startGame("", undefined, customTracks);
         } catch (error) {
