@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Disc3, Send, Clock, Trophy, Check } from 'lucide-react';
 
 export function Game() {
-  const { room, currentTrack, roundEndTime, isTimerStarted, intermissionCountdown, actions } = useGameStore();
+  const { room, currentTrack, roundEndTime, isTimerStarted, roundGuessTarget, intermissionCountdown, actions } = useGameStore();
   const [guess, setGuess] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [hasGuessed, setHasGuessed] = useState(false);
@@ -57,10 +57,12 @@ export function Game() {
   let promptText = "What's this song?";
   let placeholderText = "Type song name or artist...";
   
-  if (room.settings.guessTarget === "SONG") {
+  const target = roundGuessTarget || room.settings.guessTarget;
+
+  if (target === "SONG") {
     promptText = "Guess the Song!";
     placeholderText = "Type song name...";
-  } else if (room.settings.guessTarget === "ARTIST") {
+  } else if (target === "ARTIST") {
     promptText = "Guess the Artist!";
     placeholderText = "Type artist name...";
   } else {

@@ -22,6 +22,7 @@ interface Room {
   };
   tracks: any[];
   currentTrackIndex: number;
+  roundGuessTarget?: "SONG" | "ARTIST";
 }
 
 interface GameState {
@@ -34,12 +35,13 @@ interface GameState {
   userToken: string | null;
   
   // Round specific
-  currentTrack: { previewUrl: string; duration: number; startTime?: number; choices?: string[] } | null;
+  currentTrack: { previewUrl: string; duration: number; startTime?: number; choices?: string[]; roundGuessTarget?: "SONG" | "ARTIST" } | null;
   roundStartTime: number;
   roundEndTime: number;
   isTimerStarted: boolean;
   currentTrackIndex: number;
   totalTracks: number;
+  roundGuessTarget: "SONG" | "ARTIST" | null;
   
   // Round end specific
   intermissionCountdown: number | null;
@@ -78,6 +80,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   isTimerStarted: false,
   currentTrackIndex: 0,
   totalTracks: 0,
+  roundGuessTarget: null,
   
   intermissionCountdown: null,
   lastRoundResult: null,
@@ -107,6 +110,7 @@ export const useGameStore = create<GameState>((set, get) => ({
           isTimerStarted: false,
           currentTrackIndex: data.currentTrackIndex,
           totalTracks: data.totalTracks,
+          roundGuessTarget: data.track.roundGuessTarget || null,
           lastRoundResult: null,
           intermissionCountdown: null
         });

@@ -199,6 +199,7 @@ interface Room {
   tracks: Track[];
   currentTrackIndex: number;
   roundEndTime: number;
+  roundGuessTarget?: "SONG" | "ARTIST";
   guessesThisRound: Record<string, { guess: string; time: number; correct: boolean }>;
   roundTimeout?: NodeJS.Timeout;
   bufferedPlayers: Set<string>;
@@ -394,13 +395,20 @@ io.on("connection", (socket) => {
     // Send track info (WITHOUT the name/artist to prevent cheating)
     const currentTrack = room.tracks[room.currentTrackIndex];
     
+    // Determine round guess target if set to BOTH
+    if (room.settings.guessTarget === "BOTH") {
+      room.roundGuessTarget = Math.random() > 0.5 ? "SONG" : "ARTIST";
+    } else {
+      room.roundGuessTarget = room.settings.guessTarget;
+    }
+
     let choices: string[] | undefined;
     if (room.settings.gameMode === "CHOICE_4" || room.settings.gameMode === "CHOICE_5") {
       const numChoices = room.settings.gameMode === "CHOICE_5" ? 5 : 4;
       
       const getChoiceText = (t: Track) => {
-        if (room.settings.guessTarget === "SONG") return t.name;
-        if (room.settings.guessTarget === "ARTIST") return t.artist;
+        if (room.roundGuessTarget === "SONG") return t.name;
+        if (room.roundGuessTarget === "ARTIST") return t.artist;
         return `${t.name} - ${t.artist}`;
       };
 
@@ -423,7 +431,8 @@ io.on("connection", (socket) => {
       previewUrl: currentTrack.previewUrl,
       duration: room.settings.guessTime,
       startTime: currentTrack.startTime || 30,
-      choices
+      choices,
+      roundGuessTarget: room.roundGuessTarget
     };
 
     room.roundEndTime = 0;
@@ -479,20 +488,22 @@ io.on("connection", (socket) => {
     const normalizedArtist = currentTrack.artist.toLowerCase().trim();
     
     let isCorrect = false;
+    const target = room.roundGuessTarget || room.settings.guessTarget;
     
     if (room.settings.gameMode === "TYPING") {
-      if (room.settings.guessTarget === "SONG") {
+      if (target === "SONG") {
         isCorrect = normalizedName.includes(normalizedGuess) || normalizedGuess.includes(normalizedName);
-      } else if (room.settings.guessTarget === "ARTIST") {
+      } else if (target === "ARTIST") {
         isCorrect = normalizedArtist.includes(normalizedGuess) || normalizedGuess.includes(normalizedArtist);
       } else {
+        // Fallback for BOTH if target wasn't set correctly
         isCorrect = normalizedName.includes(normalizedGuess) || normalizedGuess.includes(normalizedName) ||
                     normalizedArtist.includes(normalizedGuess) || normalizedGuess.includes(normalizedArtist);
       }
     } else {
       // For choice modes, exact match of the choice text
-      const expectedChoice = room.settings.guessTarget === "SONG" ? currentTrack.name :
-                             room.settings.guessTarget === "ARTIST" ? currentTrack.artist :
+      const expectedChoice = target === "SONG" ? currentTrack.name :
+                             target === "ARTIST" ? currentTrack.artist :
                              `${currentTrack.name} - ${currentTrack.artist}`;
       isCorrect = guess === expectedChoice;
     }
