@@ -70,5 +70,18 @@ export function AudioPlayer() {
     }
   };
 
-  return <audio ref={audioRef} />;
+  return (
+    <>
+      <audio ref={audioRef} />
+      {isBlocked && (
+        <button
+          onClick={handleUnblock}
+          className="fixed bottom-4 right-4 z-[100] bg-[#1DB954] text-black p-3 rounded-full shadow-lg hover:scale-105 transition-transform"
+          title="Enable Audio"
+        >
+          <Volume2 size={24} />
+        </button>
+      )}
+    </>
+  );
 }
