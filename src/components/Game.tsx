@@ -259,11 +259,24 @@ export function Game() {
                           onLoad={() => {
                             console.log("Image loaded:", currentTrack.imageUrl);
                             setImgLoading(false);
+                            // Signal server that we are ready (image is visible)
+                            // Only do this for non-music categories as music is handled by AudioPlayer
+                            if (!currentTrack.previewUrl) {
+                              actions.trackPlaying();
+                            }
                           }}
                           onError={(e) => {
                             console.error("Image failed to load:", currentTrack.imageUrl);
-                            // Try picsum fallback immediately
-                            const fallback = `https://picsum.photos/seed/${encodeURIComponent(room.category + room.currentTrackIndex)}/800/600`;
+                            // Signal ready even on error so the game doesn't hang
+                            if (!currentTrack.previewUrl) {
+                              actions.trackPlaying();
+                            }
+                            // Try a fallback using the category and description if available
+                            const tags = [room.category.toLowerCase()];
+                            if (currentTrack.description) {
+                              tags.push(...currentTrack.description.split(' ').slice(0, 2));
+                            }
+                            const fallback = `https://loremflickr.com/800/600/${encodeURIComponent(tags.join(','))}?w=800&h=600&fit=cover`;
                             (e.target as HTMLImageElement).src = fallback;
                           }}
                         />

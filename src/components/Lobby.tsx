@@ -122,11 +122,15 @@ export function Lobby() {
           const selected = shuffled.slice(0, room.settings.numTracks || 5);
 
           const customTracks = selected.map((c: any, i: number) => {
-            // Use a more robust image URL with fallback and category context
-            const categoryKeyword = room.category.toLowerCase();
-            const searchTerms = encodeURIComponent(`${c.imageUrl || c.name} ${categoryKeyword}`);
-            // Use weserv.nl as a proxy to help with image loading and SSL/Referrer issues
-            const imgUrl = `https://images.weserv.nl/?url=loremflickr.com/800/600/${searchTerms}?lock=${i}-${Date.now()}&w=800&h=600&fit=cover`;
+            // Use comma-separated tags for better relevance with LoremFlickr
+            // We combine the specific clue name with the category
+            // We take only the first 2 words of the name to keep the search broad and fast
+            const nameTags = (c.imageUrl || c.name).split(' ').slice(0, 2);
+            const tags = nameTags.concat(room.category.toLowerCase()).join(',');
+            const searchTerms = encodeURIComponent(tags);
+            
+            // Use LoremFlickr directly for faster initial response
+            const imgUrl = `https://loremflickr.com/800/600/${searchTerms}?lock=${i}-${Date.now()}`;
             
             return {
               id: `clue-${i}-${Date.now()}`,

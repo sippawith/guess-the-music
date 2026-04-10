@@ -17,7 +17,7 @@ export function AudioPlayer() {
       }
 
       // Only change source if it's a new track
-      if (audioRef.current.src !== currentTrack.previewUrl) {
+      if (currentTrack.previewUrl && audioRef.current.src !== currentTrack.previewUrl) {
         audioRef.current.src = currentTrack.previewUrl;
         audioRef.current.volume = 0.5;
         audioRef.current.play().then(() => {
@@ -30,6 +30,15 @@ export function AudioPlayer() {
         audioRef.current.onplay = () => {
           actions.trackPlaying();
         };
+      } else if (!currentTrack.previewUrl) {
+        // No audio for this track/category
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current.src = "";
+        }
+        setIsBlocked(false);
+        // We don't call trackPlaying here for non-music categories; 
+        // Game.tsx will handle it when the image actually loads to ensure synchronization.
       }
     }
 
