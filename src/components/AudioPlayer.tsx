@@ -70,27 +70,5 @@ export function AudioPlayer() {
     }
   };
 
-  if (isBlocked && room?.state === 'PLAYING') {
-    return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl">
-        <div className="text-center space-y-6 max-w-xs px-6">
-          <div className="w-20 h-20 bg-[#1DB954]/20 rounded-full flex items-center justify-center mx-auto animate-pulse">
-            <Volume2 className="text-[#1DB954]" size={40} />
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-bold">Audio Blocked</h3>
-            <p className="text-sm text-white/60">Mobile browsers require a tap to enable game audio.</p>
-          </div>
-          <button 
-            onClick={handleUnblock}
-            className="w-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold py-4 rounded-2xl transition-all shadow-[0_0_20px_rgba(29,185,84,0.3)]"
-          >
-            ENABLE AUDIO
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return <audio ref={audioRef} />;
 }
