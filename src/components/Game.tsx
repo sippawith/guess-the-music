@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Disc3, Send, Clock, Trophy, Check, Sparkles, Lightbulb, RefreshCw, AlertCircle } from 'lucide-react';
+import { Disc3, Send, Clock, Trophy, Check, Sparkles, Lightbulb, RefreshCw, AlertCircle, ArrowLeft } from 'lucide-react';
 
 export function Game() {
   const { room, currentTrack, roundEndTime, isTimerStarted, roundGuessTarget, actions } = useGameStore();
@@ -92,8 +92,16 @@ export function Game() {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="w-full max-w-6xl px-4"
+      className="w-full max-w-6xl px-4 relative"
     >
+      <button 
+        onClick={() => actions.leaveRoom()}
+        className="fixed top-8 left-8 p-3 rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all z-50 backdrop-blur-md"
+        title="Leave Game"
+      >
+        <ArrowLeft size={24} />
+      </button>
+
       <AnimatePresence>
         {room.countdown > 0 && (
           <motion.div
@@ -243,11 +251,10 @@ export function Game() {
                         </div>
                       ) : (
                         <img 
-                          src={currentTrack.imageUrl.includes('loremflickr') 
-                            ? `https://images.weserv.nl/?url=${currentTrack.imageUrl.replace('https://', '')}&w=800&h=600&fit=cover`
-                            : currentTrack.imageUrl
-                          } 
+                          key={imgRetryKey}
+                          src={currentTrack.imageUrl} 
                           alt="Clue" 
+                          referrerPolicy="no-referrer"
                           className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
                           onLoad={() => {
                             console.log("Image loaded:", currentTrack.imageUrl);
@@ -255,14 +262,9 @@ export function Game() {
                           }}
                           onError={(e) => {
                             console.error("Image failed to load:", currentTrack.imageUrl);
-                            if (currentTrack.imageUrl?.includes('loremflickr')) {
-                              // Try picsum fallback immediately
-                              const fallback = `https://picsum.photos/seed/${encodeURIComponent(currentTrack.imageUrl)}/800/600`;
-                              (e.target as HTMLImageElement).src = fallback;
-                            } else {
-                              setImgError(true);
-                              setImgLoading(false);
-                            }
+                            // Try picsum fallback immediately
+                            const fallback = `https://picsum.photos/seed/${encodeURIComponent(room.category + room.currentTrackIndex)}/800/600`;
+                            (e.target as HTMLImageElement).src = fallback;
                           }}
                         />
                       )}
@@ -311,6 +313,25 @@ export function Game() {
                     </h2>
                   </div>
                   
+                  {/* Hint Button */}
+                  {!currentTrack.hint && (
+                    <div className="mb-8">
+                      <button
+                        onClick={() => actions.getHint()}
+                        disabled={room && room.hintsUsed >= (room.settings.hintsPerGame || Math.max(1, Math.floor(room.tracks.length * 0.3)))}
+                        className="flex items-center gap-3 px-6 py-3 rounded-full bg-[#1DB954]/10 border border-[#1DB954]/30 hover:bg-[#1DB954]/20 hover:border-[#1DB954]/50 transition-all group disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <Lightbulb className="text-[#1DB954] group-hover:animate-pulse" size={18} />
+                        <span className="text-sm font-medium text-[#1DB954] group-hover:text-white">Request Intelligence Hint</span>
+                        {room && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full bg-black/40 text-[10px] font-mono text-[#1DB954]">
+                            {Math.max(0, (room.settings.hintsPerGame || Math.max(1, Math.floor(room.tracks.length * 0.3))) - room.hintsUsed)} left
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
                   {currentTrack.choices ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                       {currentTrack.choices.map((choice, idx) => (
@@ -332,43 +353,24 @@ export function Game() {
                       ))}
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center gap-6 w-full max-w-lg">
-                      <form onSubmit={handleSubmit} className="relative group w-full">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-[#1DB954]/20 to-transparent rounded-[2.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
-                        <input
-                          type="text"
-                          value={guess}
-                          onChange={(e) => setGuess(e.target.value)}
-                          placeholder={placeholderText}
-                          className="relative w-full bg-black/60 border-2 border-white/10 rounded-[2rem] px-8 py-6 text-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#1DB954] transition-all"
-                          autoFocus
-                        />
-                        <button 
-                          type="submit"
-                          disabled={!guess.trim()}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#1DB954] hover:bg-[#1ed760] text-black p-4 rounded-2xl disabled:opacity-30 transition-all shadow-xl"
-                        >
-                          <Send size={24} />
-                        </button>
-                      </form>
-
-                      {/* Hint Button */}
-                      {!currentTrack.hint && (
-                        <button
-                          onClick={() => actions.getHint()}
-                          disabled={room && room.hintsUsed >= (room.settings.hintsPerGame || Math.max(1, Math.floor(room.tracks.length * 0.3)))}
-                          className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#1DB954]/50 transition-all group disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          <Lightbulb className="text-[#1DB954] group-hover:animate-pulse" size={18} />
-                          <span className="text-sm font-medium text-white/60 group-hover:text-white">Request Hint</span>
-                          {room && (
-                            <span className="ml-2 px-2 py-0.5 rounded-full bg-black/40 text-[10px] font-mono text-[#1DB954]">
-                              {Math.max(0, (room.settings.hintsPerGame || Math.max(1, Math.floor(room.tracks.length * 0.3))) - room.hintsUsed)} left
-                            </span>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    <form onSubmit={handleSubmit} className="relative group w-full max-w-lg">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-[#1DB954]/20 to-transparent rounded-[2.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                      <input
+                        type="text"
+                        value={guess}
+                        onChange={(e) => setGuess(e.target.value)}
+                        placeholder={placeholderText}
+                        className="relative w-full bg-black/60 border-2 border-white/10 rounded-[2rem] px-8 py-6 text-xl text-white placeholder:text-white/20 focus:outline-none focus:border-[#1DB954] transition-all"
+                        autoFocus
+                      />
+                      <button 
+                        type="submit"
+                        disabled={!guess.trim()}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#1DB954] hover:bg-[#1ed760] text-black p-4 rounded-2xl disabled:opacity-30 transition-all shadow-xl"
+                      >
+                        <Send size={24} />
+                      </button>
+                    </form>
                   )}
                 </motion.div>
               ) : (

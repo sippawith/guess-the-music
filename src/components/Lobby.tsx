@@ -13,7 +13,8 @@ import {
   FastForward,
   Languages,
   Globe,
-  Lightbulb
+  Lightbulb,
+  ArrowLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
@@ -230,6 +231,14 @@ export function Lobby() {
         <div className="bg-[#151619] border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#1DB954] to-transparent opacity-50" />
           
+          <button 
+            onClick={() => actions.leaveRoom()}
+            className="absolute top-4 left-4 p-2 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all z-10"
+            title="Leave Room"
+          >
+            <ArrowLeft size={16} />
+          </button>
+
           <div className="text-center mb-8">
             <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-white/40 mb-3">System // Access Code</p>
             <div 
@@ -340,11 +349,12 @@ export function Lobby() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
                 <div className="space-y-4">
                   <label className="text-[10px] font-mono uppercase tracking-widest text-white/40 block">Input Protocol</label>
-                  <div className="flex p-1 bg-black/40 rounded-xl border border-white/5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { id: "TYPING", label: "Manual" },
                       { id: "CHOICE_4", label: "4-Way" },
-                      { id: "CHOICE_5", label: "5-Way" }
+                      { id: "CHOICE_5", label: "5-Way" },
+                      { id: "CHOICE_CUSTOM", label: "Custom" }
                     ].map(mode => (
                       <button
                         key={mode.id}
@@ -356,6 +366,20 @@ export function Lobby() {
                     ))}
                   </div>
                 </div>
+
+                {room.settings.gameMode === 'CHOICE_CUSTOM' && (
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-mono uppercase tracking-widest text-white/40 block">Number of Options</label>
+                    <input 
+                      type="number"
+                      min="2"
+                      max="10"
+                      value={room.settings.numChoices}
+                      onChange={(e) => actions.updateSettings({ numChoices: parseInt(e.target.value) || 4 })}
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 font-mono text-lg text-[#1DB954] focus:outline-none focus:border-[#1DB954]/50 transition-colors"
+                    />
+                  </div>
+                )}
                 {room.category === 'MUSIC' && (
                   <div className="space-y-4">
                     <label className="text-[10px] font-mono uppercase tracking-widest text-white/40 block">Target Data</label>

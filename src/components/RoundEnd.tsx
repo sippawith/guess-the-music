@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store';
 import { motion } from 'motion/react';
-import { CheckCircle2, XCircle, Trophy, Music, Clock, Globe } from 'lucide-react';
+import { CheckCircle2, XCircle, Trophy, Music, Clock, Globe, ArrowLeft } from 'lucide-react';
 
 export function RoundEnd() {
-  const { lastRoundResult, intermissionEndTime, intermissionDuration, room } = useGameStore();
+  const { lastRoundResult, intermissionEndTime, intermissionDuration, room, actions } = useGameStore();
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -27,8 +27,16 @@ export function RoundEnd() {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-6xl px-4"
+      className="w-full max-w-6xl px-4 relative"
     >
+      <button 
+        onClick={() => actions.leaveRoom()}
+        className="fixed top-8 left-8 p-3 rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all z-50 backdrop-blur-md"
+        title="Leave Room"
+      >
+        <ArrowLeft size={24} />
+      </button>
+
       <div className="text-center mb-12">
         <p className="text-[10px] font-mono uppercase tracking-[0.5em] text-[#1DB954] mb-4">Round Conclusion</p>
         <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight leading-none">

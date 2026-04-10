@@ -235,9 +235,10 @@ interface Room {
     guessTime: number;
     numTracks: number;
     playlistUrl: string;
-    gameMode: "TYPING" | "CHOICE_4" | "CHOICE_5";
+    gameMode: "TYPING" | "CHOICE_4" | "CHOICE_5" | "CHOICE_CUSTOM";
     guessTarget: "SONG" | "ARTIST" | "BOTH";
     intermissionTime: number;
+    numChoices: number;
     movieGenre?: string;
     cartoonSource?: string;
     landmarkRegion?: string;
@@ -258,6 +259,12 @@ const rooms: Record<string, Room> = {};
 
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function getPublicRoom(room: Room) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { roundTimeout, bufferedPlayers, ...publicRoom } = room;
+  return publicRoom;
 }
 
 // --- API Routes ---
@@ -403,6 +410,7 @@ io.on("connection", (socket) => {
         gameMode: "TYPING", 
         guessTarget: "BOTH",
         intermissionTime: 8,
+        numChoices: 4,
         movieGenre: "Action/Drama",
         cartoonSource: "Disney/CN",
         landmarkRegion: "Global",
@@ -416,7 +424,7 @@ io.on("connection", (socket) => {
     };
     socket.join(roomId);
     socket.emit("room_created", roomId);
-    io.to(roomId).emit("room_update", rooms[roomId]);
+    io.to(roomId).emit("room_update", getPublicRoom(rooms[roomId]));
   });
 
   socket.on("join_room", ({ roomId, name }) => {
@@ -432,14 +440,31 @@ io.on("connection", (socket) => {
     
     room.players[socket.id] = { id: socket.id, name, score: 0, isHost: false };
     socket.join(roomId);
-    io.to(roomId).emit("room_update", room);
+    io.to(roomId).emit("room_update", getPublicRoom(room));
+  });
+
+  socket.on("leave_room", ({ roomId }) => {
+    const room = rooms[roomId];
+    if (room && room.players[socket.id]) {
+      delete room.players[socket.id];
+      if (Object.keys(room.players).length === 0) {
+        delete rooms[roomId];
+      } else {
+        // If host left, assign new host
+        const remainingPlayers = Object.values(room.players);
+        if (!remainingPlayers.some(p => p.isHost)) {
+          remainingPlayers[0].isHost = true;
+        }
+        io.to(roomId).emit("room_update", getPublicRoom(room));
+      }
+    }
   });
 
   socket.on("update_settings", ({ roomId, settings }) => {
     const room = rooms[roomId];
     if (room && room.players[socket.id]?.isHost) {
       room.settings = { ...room.settings, ...settings };
-      io.to(roomId).emit("room_update", room);
+      io.to(roomId).emit("room_update", getPublicRoom(room));
     }
   });
 
@@ -457,7 +482,7 @@ io.on("connection", (socket) => {
       // Reset scores? Usually yes for a new game
       Object.values(room.players).forEach(p => p.score = 0);
       
-      io.to(roomId).emit("room_update", room);
+      io.to(roomId).emit("room_update", getPublicRoom(room));
     }
   });
 
@@ -566,7 +591,7 @@ io.on("connection", (socket) => {
       }, 1000);
       
       io.to(roomId).emit("countdown_start", 5);
-      io.to(roomId).emit("room_update", room);
+      io.to(roomId).emit("room_update", getPublicRoom(room));
     } catch (error: any) {
       console.error("Game Start Error:", error.response?.data || error.message);
       let errorMsg = error.response?.data?.error?.message || error.message;
@@ -598,8 +623,8 @@ io.on("connection", (socket) => {
     }
 
     let choices: string[] | undefined;
-    if (room.settings.gameMode === "CHOICE_4" || room.settings.gameMode === "CHOICE_5") {
-      const numChoices = room.settings.gameMode === "CHOICE_5" ? 5 : 4;
+    if (room.settings.gameMode === "CHOICE_4" || room.settings.gameMode === "CHOICE_5" || room.settings.gameMode === "CHOICE_CUSTOM") {
+      const numChoices = room.settings.gameMode === "CHOICE_CUSTOM" ? (room.settings.numChoices || 4) : (room.settings.gameMode === "CHOICE_5" ? 5 : 4);
       
       const getChoiceText = (t: any) => {
         if (room.roundGuessTarget === "SONG") return t.name;
@@ -640,9 +665,13 @@ io.on("connection", (socket) => {
       console.log(`[Game] Generated ${choices.length} choices for category ${room.category}:`, choices);
     }
 
+    const imageUrl = currentTrack.imageUrl && !currentTrack.imageUrl.startsWith('http') 
+      ? `https://loremflickr.com/800/600/${encodeURIComponent(currentTrack.name.replace(/\s+/g, ','))}`
+      : currentTrack.imageUrl;
+
     const trackDataForClients = {
       previewUrl: currentTrack.previewUrl,
-      imageUrl: currentTrack.imageUrl,
+      imageUrl: imageUrl,
       description: currentTrack.description,
       albumArt: currentTrack.albumArt,
       duration: room.settings.guessTime,
@@ -660,7 +689,7 @@ io.on("connection", (socket) => {
       totalTracks: room.tracks.length
     });
     
-    io.to(roomId).emit("room_update", room);
+    io.to(roomId).emit("room_update", getPublicRoom(room));
 
     // Schedule round end
     if (room.roundTimeout) clearTimeout(room.roundTimeout);
@@ -775,7 +804,7 @@ io.on("connection", (socket) => {
 
     room.hintsUsed++;
     io.to(roomId).emit("hint_revealed", { hint, hintsUsed: room.hintsUsed, maxHints });
-    io.to(roomId).emit("room_update", room);
+    io.to(roomId).emit("room_update", getPublicRoom(room));
   });
 
   function endRound(roomId: string) {
@@ -813,7 +842,7 @@ io.on("connection", (socket) => {
       players: room.players
     });
     
-    io.to(roomId).emit("room_update", room);
+    io.to(roomId).emit("room_update", getPublicRoom(room));
 
     // Schedule next round or game end
     if (room.currentTrackIndex < room.tracks.length - 1) {
@@ -835,7 +864,7 @@ io.on("connection", (socket) => {
       setTimeout(() => {
         room.state = "GAME_END";
         io.to(roomId).emit("game_end", room.players);
-        io.to(roomId).emit("room_update", room);
+        io.to(roomId).emit("room_update", getPublicRoom(room));
       }, finalIntermission);
     }
   }
@@ -854,7 +883,7 @@ io.on("connection", (socket) => {
           if (!remainingPlayers.some(p => p.isHost)) {
             remainingPlayers[0].isHost = true;
           }
-          io.to(roomId).emit("room_update", rooms[roomId]);
+          io.to(roomId).emit("room_update", getPublicRoom(rooms[roomId]));
         }
       }
     }

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useGameStore } from '../store';
 import { motion } from 'motion/react';
-import { Trophy, Home } from 'lucide-react';
+import { Trophy, Home, ArrowLeft } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export function GameEnd() {
@@ -41,8 +41,16 @@ export function GameEnd() {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-3xl text-center"
+      className="w-full max-w-3xl text-center relative"
     >
+      <button 
+        onClick={() => actions.leaveRoom()}
+        className="fixed top-8 left-8 p-3 rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all z-50 backdrop-blur-md"
+        title="Leave Game"
+      >
+        <ArrowLeft size={24} />
+      </button>
+
       <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-[#1DB954]/20 text-[#1DB954] mb-8">
         <Trophy size={48} />
       </div>

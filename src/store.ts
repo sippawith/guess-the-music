@@ -28,9 +28,10 @@ interface Room {
     guessTime: number;
     numTracks: number;
     playlistUrl: string;
-    gameMode: "TYPING" | "CHOICE_4" | "CHOICE_5";
+    gameMode: "TYPING" | "CHOICE_4" | "CHOICE_5" | "CHOICE_CUSTOM";
     guessTarget: "SONG" | "ARTIST" | "BOTH";
     intermissionTime: number;
+    numChoices: number;
     movieGenre?: string;
     cartoonSource?: string;
     landmarkRegion?: string;
@@ -97,6 +98,7 @@ interface GameState {
     resetToLobby: () => void;
     submitGuess: (guess: string) => void;
     getHint: () => void;
+    leaveRoom: () => void;
     clearError: () => void;
     trackPlaying: () => void;
   };
@@ -259,6 +261,14 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (socket && roomId && isTimerStarted) {
         socket.emit('get_hint', { roomId });
       }
+    },
+    
+    leaveRoom: () => {
+      const { socket, roomId } = get();
+      if (socket && roomId) {
+        socket.emit('leave_room', { roomId });
+      }
+      set({ roomId: null, room: null, gameStatus: null, currentTrack: null });
     },
     
     clearError: () => set({ error: null }),
