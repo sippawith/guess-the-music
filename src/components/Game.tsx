@@ -356,14 +356,14 @@ export function Game() {
                       {!currentTrack.hint && (
                         <button
                           onClick={() => actions.getHint()}
-                          disabled={currentTrack.hintsUsed !== undefined && currentTrack.maxHints !== undefined && currentTrack.hintsUsed >= currentTrack.maxHints}
+                          disabled={room && room.hintsUsed >= (room.settings.hintsPerGame || Math.max(1, Math.floor(room.tracks.length * 0.3)))}
                           className="flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-[#1DB954]/50 transition-all group disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           <Lightbulb className="text-[#1DB954] group-hover:animate-pulse" size={18} />
                           <span className="text-sm font-medium text-white/60 group-hover:text-white">Request Hint</span>
-                          {currentTrack.hintsUsed !== undefined && currentTrack.maxHints !== undefined && (
+                          {room && (
                             <span className="ml-2 px-2 py-0.5 rounded-full bg-black/40 text-[10px] font-mono text-[#1DB954]">
-                              {currentTrack.maxHints - currentTrack.hintsUsed} left
+                              {Math.max(0, (room.settings.hintsPerGame || Math.max(1, Math.floor(room.tracks.length * 0.3))) - room.hintsUsed)} left
                             </span>
                           )}
                         </button>

@@ -12,7 +12,8 @@ import {
   Timer, 
   FastForward,
   Languages,
-  Globe
+  Globe,
+  Lightbulb
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
@@ -318,6 +319,19 @@ export function Lobby() {
                     max="30"
                     value={room.settings.intermissionTime}
                     onChange={(e) => actions.updateSettings({ intermissionTime: parseInt(e.target.value) || 8 })}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 font-mono text-lg text-[#1DB954] focus:outline-none focus:border-[#1DB954]/50 transition-colors"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-white/40">
+                    <Lightbulb size={12} /> Hints Per Game
+                  </label>
+                  <input 
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={room.settings.hintsPerGame}
+                    onChange={(e) => actions.updateSettings({ hintsPerGame: parseInt(e.target.value) || 0 })}
                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 font-mono text-lg text-[#1DB954] focus:outline-none focus:border-[#1DB954]/50 transition-colors"
                   />
                 </div>

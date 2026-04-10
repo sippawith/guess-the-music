@@ -34,6 +34,7 @@ interface Room {
     movieGenre?: string;
     cartoonSource?: string;
     landmarkRegion?: string;
+    hintsPerGame: number;
   };
   tracks: any[];
   currentTrackIndex: number;

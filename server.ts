@@ -241,6 +241,7 @@ interface Room {
     movieGenre?: string;
     cartoonSource?: string;
     landmarkRegion?: string;
+    hintsPerGame: number;
   };
   tracks: Track[];
   currentTrackIndex: number;
@@ -404,7 +405,8 @@ io.on("connection", (socket) => {
         intermissionTime: 8,
         movieGenre: "Action/Drama",
         cartoonSource: "Disney/CN",
-        landmarkRegion: "Global"
+        landmarkRegion: "Global",
+        hintsPerGame: 3
       },
       tracks: [],
       currentTrackIndex: -1,
@@ -447,6 +449,7 @@ io.on("connection", (socket) => {
       room.state = "LOBBY";
       room.currentTrackIndex = -1;
       room.tracks = [];
+      room.hintsUsed = 0;
       room.guessesThisRound = {};
       room.bufferedPlayers = new Set();
       if (room.roundTimeout) clearTimeout(room.roundTimeout);
@@ -742,7 +745,7 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room || room.state !== "PLAYING") return;
 
-    const maxHints = Math.max(1, Math.floor(room.tracks.length * 0.3));
+    const maxHints = room.settings.hintsPerGame || Math.max(1, Math.floor(room.tracks.length * 0.3));
     if (room.hintsUsed >= maxHints) {
       socket.emit("error", "No hints remaining!");
       return;
