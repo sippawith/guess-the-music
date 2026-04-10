@@ -22,6 +22,27 @@ const PORT = 3000;
 
 app.use(express.json());
 
+async function fetchAllSpotifyTracks(playlistId: string, token: string) {
+  let tracks: any[] = [];
+  let url: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
+  
+  while (url) {
+    try {
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      tracks.push(...response.data.items);
+      url = response.data.next;
+    } catch (e) {
+      console.error("Error fetching Spotify tracks page:", e);
+      break;
+    }
+  }
+  
+  return tracks;
+}
+
 // --- Spotify API Helper ---
 let spotifyAccessToken = "";
 let spotifyTokenExpiry = 0;
@@ -505,22 +526,17 @@ io.on("connection", (socket) => {
           const token = userToken || await getSpotifyToken();
           if (token && playlistId) {
             try {
-              const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
-                headers: { Authorization: `Bearer ${token}` },
-                params: { limit: 100 } // Get more tracks
-              });
+              const allItems = await fetchAllSpotifyTracks(playlistId, token);
               
-              if (response.data.items) {
-                tracks = response.data.items
-                  .filter((item: any) => item.track)
-                  .map((item: any) => ({
-                    id: item.track.id,
-                    name: item.track.name,
-                    artist: item.track.artists.map((a: any) => a.name).join(", "),
-                    previewUrl: item.track.preview_url || "",
-                    albumArt: item.track.album.images?.[0]?.url || ""
-                  }));
-              }
+              tracks = allItems
+                .filter((item: any) => item.track)
+                .map((item: any) => ({
+                  id: item.track.id,
+                  name: item.track.name,
+                  artist: item.track.artists.map((a: any) => a.name).join(", "),
+                  previewUrl: item.track.preview_url || "",
+                  albumArt: item.track.album.images?.[0]?.url || ""
+                }));
             } catch (e) {
               const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
               if (scrapedTracks) tracks = scrapedTracks;
