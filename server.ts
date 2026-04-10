@@ -195,6 +195,7 @@ interface Room {
     playlistUrl: string;
     gameMode: "TYPING" | "CHOICE_4" | "CHOICE_5";
     guessTarget: "SONG" | "ARTIST" | "BOTH";
+    intermissionTime: number;
   };
   tracks: Track[];
   currentTrackIndex: number;
@@ -271,7 +272,14 @@ io.on("connection", (socket) => {
         [socket.id]: { id: socket.id, name, score: 0, isHost: true }
       },
       state: "LOBBY",
-      settings: { guessTime: 15, numTracks: 5, playlistUrl: "", gameMode: "TYPING", guessTarget: "BOTH" },
+      settings: { 
+        guessTime: 15, 
+        numTracks: 5, 
+        playlistUrl: "", 
+        gameMode: "TYPING", 
+        guessTarget: "BOTH",
+        intermissionTime: 8
+      },
       tracks: [],
       currentTrackIndex: -1,
       roundEndTime: 0,
@@ -564,7 +572,7 @@ io.on("connection", (socket) => {
 
     // Schedule next round or game end
     if (room.currentTrackIndex < room.tracks.length - 1) {
-      let countdown = 8;
+      let countdown = room.settings.intermissionTime || 8;
       io.to(roomId).emit("intermission_countdown", countdown);
       
       const interval = setInterval(() => {
@@ -582,7 +590,7 @@ io.on("connection", (socket) => {
         room.state = "GAME_END";
         io.to(roomId).emit("game_end", room.players);
         io.to(roomId).emit("room_update", room);
-      }, 8000);
+      }, (room.settings.intermissionTime || 8) * 1000);
     }
   }
 

@@ -5,6 +5,7 @@ import { Lobby } from './components/Lobby';
 import { Game } from './components/Game';
 import { RoundEnd } from './components/RoundEnd';
 import { GameEnd } from './components/GameEnd';
+import { AudioPlayer } from './components/AudioPlayer';
 import { AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#0a0502] text-white font-sans selection:bg-[#1DB954] selection:text-black">
+      <AudioPlayer />
       {/* Background Atmosphere */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,_#1a2e1f_0%,_transparent_60%)] opacity-80 blur-[60px]" />

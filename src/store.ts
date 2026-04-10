@@ -19,6 +19,7 @@ interface Room {
     playlistUrl: string;
     gameMode: "TYPING" | "CHOICE_4" | "CHOICE_5";
     guessTarget: "SONG" | "ARTIST" | "BOTH";
+    intermissionTime: number;
   };
   tracks: any[];
   currentTrackIndex: number;
@@ -129,7 +130,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       });
 
       socket.on('round_end', (data) => {
-        set({ lastRoundResult: data, currentTrack: null, isTimerStarted: false });
+        set({ lastRoundResult: data, isTimerStarted: false });
       });
 
       socket.on('game_end', (players) => {
@@ -156,7 +157,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     },
     
-    updateSettings: (settings) => {
+    updateSettings: (settings: Partial<Room['settings']>) => {
       const { socket, roomId } = get();
       if (socket && roomId) {
         socket.emit('update_settings', { roomId, settings });
