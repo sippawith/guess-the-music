@@ -1,9 +1,22 @@
+import { useState, useEffect } from 'react';
 import { useGameStore } from '../store';
 import { motion } from 'motion/react';
-import { CheckCircle2, XCircle, Trophy, Music, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, Trophy, Music, Clock, Globe } from 'lucide-react';
 
 export function RoundEnd() {
-  const { lastRoundResult, intermissionCountdown, room } = useGameStore();
+  const { lastRoundResult, intermissionEndTime, intermissionDuration, room } = useGameStore();
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (intermissionEndTime) {
+      const interval = setInterval(() => {
+        const remaining = Math.max(0, Math.ceil((intermissionEndTime - Date.now()) / 1000));
+        setTimeLeft(remaining);
+        if (remaining <= 0) clearInterval(interval);
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [intermissionEndTime]);
 
   if (!lastRoundResult) return null;
 
@@ -28,7 +41,7 @@ export function RoundEnd() {
         <div className="lg:col-span-7">
           <div className="bg-[#151619] border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5">
-              <Music size={200} />
+              {room.category === 'MUSIC' ? <Music size={200} /> : <Globe size={200} />}
             </div>
 
             <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
@@ -56,7 +69,9 @@ export function RoundEnd() {
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <p className="text-[10px] font-mono text-[#1DB954] uppercase tracking-[0.3em] mb-3">Track Identity</p>
+                  <p className="text-[10px] font-mono text-[#1DB954] uppercase tracking-[0.3em] mb-3">
+                    {room.category === 'MUSIC' ? 'Track Identity' : room.category === 'LANDMARK' ? 'Location Identity' : 'Subject Identity'}
+                  </p>
                   <h3 className="text-3xl md:text-4xl font-black text-white mb-2 leading-tight">
                     {track.name}
                   </h3>
@@ -65,7 +80,7 @@ export function RoundEnd() {
                   </p>
                 </motion.div>
 
-                {intermissionCountdown !== null && (
+                {timeLeft !== null && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -77,7 +92,7 @@ export function RoundEnd() {
                     </p>
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-mono font-bold text-[#1DB954] tabular-nums">
-                        {intermissionCountdown.toString().padStart(2, '0')}
+                        {timeLeft.toString().padStart(2, '0')}
                       </span>
                       <span className="text-xs font-mono text-white/20 uppercase">Seconds</span>
                     </div>

@@ -26,17 +26,18 @@ let spotifyAccessToken = "";
 let spotifyTokenExpiry = 0;
 
 async function getSpotifyToken() {
-  if (Date.now() < spotifyTokenExpiry && spotifyAccessToken) {
-    return spotifyAccessToken;
-  }
-  
   const clientId = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
   
   if (!clientId || !clientSecret) {
-    throw new Error("Missing Spotify credentials in environment variables.");
+    console.warn("Spotify credentials not configured. Spotify features will be disabled.");
+    return null;
   }
 
+  if (Date.now() < spotifyTokenExpiry && spotifyAccessToken) {
+    return spotifyAccessToken;
+  }
+  
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   
   try {
@@ -56,7 +57,7 @@ async function getSpotifyToken() {
     return spotifyAccessToken;
   } catch (error) {
     console.error("Error fetching Spotify token:", error);
-    throw error;
+    return null;
   }
 }
 
@@ -104,6 +105,43 @@ async function scrapeSpotifyPlaylist(playlistId: string) {
     }
   } catch (error) {
     console.error("Error scraping Spotify embed:", error);
+  }
+  return null;
+}
+
+
+async function scrapeAppleMusicPlaylist(playlistUrl: string) {
+  try {
+    const res = await axios.get(playlistUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+    const html = res.data;
+    
+    // Apple Music often has JSON-LD
+    const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    if (jsonLdMatch) {
+      const data = JSON.parse(jsonLdMatch[1]);
+      // JSON-LD can be a single object or an array
+      const root = Array.isArray(data) ? data.find(d => d["@type"] === "MusicPlaylist") : data;
+      
+      if (root && root.track) {
+        const tracks = Array.isArray(root.track) ? root.track : [root.track];
+        return tracks.map((t: any, index: number) => {
+          const item = t.item || t;
+          return {
+            id: item.url?.split('/').pop() || `am-${index}`,
+            name: item.name,
+            artist: item.byArtist?.name || "Unknown Artist",
+            previewUrl: "", // Will be fetched via Deezer
+            albumArt: item.image || ""
+          };
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error scraping Apple Music:", error);
   }
   return null;
 }
@@ -183,12 +221,15 @@ interface Track {
   previewUrl: string;
   albumArt: string;
   startTime?: number;
+  imageUrl?: string;
+  description?: string;
 }
 
 interface Room {
   id: string;
   players: Record<string, Player>;
   state: "LOBBY" | "PLAYING" | "ROUND_END" | "GAME_END";
+  category: "MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK";
   settings: {
     guessTime: number;
     numTracks: number;
@@ -196,6 +237,9 @@ interface Room {
     gameMode: "TYPING" | "CHOICE_4" | "CHOICE_5";
     guessTarget: "SONG" | "ARTIST" | "BOTH";
     intermissionTime: number;
+    movieGenre?: string;
+    cartoonSource?: string;
+    landmarkRegion?: string;
   };
   tracks: Track[];
   currentTrackIndex: number;
@@ -204,6 +248,7 @@ interface Room {
   guessesThisRound: Record<string, { guess: string; time: number; correct: boolean }>;
   roundTimeout?: NodeJS.Timeout;
   bufferedPlayers: Set<string>;
+  countdown?: number;
 }
 
 const rooms: Record<string, Room> = {};
@@ -215,19 +260,47 @@ function generateRoomCode() {
 // --- API Routes ---
 app.post("/api/playlist/details", async (req, res) => {
   try {
-    const { playlistId } = req.body;
+    const { playlistId, url } = req.body;
+    
+    if (url && url.includes("music.apple.com")) {
+      const tracks = await scrapeAppleMusicPlaylist(url);
+      if (tracks) {
+        return res.json({
+          id: url,
+          name: "Apple Music Playlist",
+          owner: { display_name: "Apple Music" },
+          images: [{ url: tracks[0]?.albumArt || "" }],
+          isApple: true
+        });
+      }
+    }
+
     const userToken = req.headers.authorization?.split(' ')[1];
     const token = userToken || await getSpotifyToken();
 
-    const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    if (token) {
+      try {
+        const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
+        return res.json({
+          id: response.data.id,
+          name: response.data.name,
+          owner: { display_name: response.data.owner.display_name },
+          images: response.data.images
+        });
+      } catch (e) {
+        console.error("Spotify API failed:", e);
+      }
+    }
+
+    // Fallback or error
     res.json({
-      id: response.data.id,
-      name: response.data.name,
-      owner: { display_name: response.data.owner.display_name },
-      images: response.data.images
+      id: playlistId || url,
+      name: "Playlist",
+      owner: { display_name: "Unknown" },
+      images: []
     });
   } catch (error: any) {
     const errorMsg = error.response?.data?.error?.message || error.message;
@@ -235,22 +308,68 @@ app.post("/api/playlist/details", async (req, res) => {
   }
 });
 
+app.post("/api/playlist/tracks", async (req, res) => {
+  try {
+    const { url, playlistId } = req.body;
+    let tracks = null;
+
+    if (url && url.includes("music.apple.com")) {
+      tracks = await scrapeAppleMusicPlaylist(url);
+    } else if (playlistId || (url && url.includes("spotify.com"))) {
+      const id = playlistId || url.split("/playlist/")[1]?.split("?")[0];
+      if (id) {
+        tracks = await scrapeSpotifyPlaylist(id);
+      }
+    }
+
+    if (!tracks) {
+      return res.status(404).json({ error: "Could not fetch tracks." });
+    }
+
+    res.json({ tracks });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post("/api/playlist/search", async (req, res) => {
   try {
     const { query } = req.body;
-    const userToken = req.headers.authorization?.split(' ')[1];
-    const token = userToken || await getSpotifyToken();
+    
+    // Try Spotify first
+    const token = await getSpotifyToken();
+    if (token) {
+      try {
+        const response = await axios.get(`https://api.spotify.com/v1/search`, {
+          params: { q: query, type: 'playlist', limit: 5 },
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-    const response = await axios.get(`https://api.spotify.com/v1/search`, {
-      params: { q: query, type: 'playlist', limit: 5 },
-      headers: { Authorization: `Bearer ${token}` }
+        const playlists = response.data.playlists.items.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          owner: { display_name: item.owner.display_name },
+          images: item.images,
+          url: `https://open.spotify.com/playlist/${item.id}`
+        }));
+
+        return res.json(playlists);
+      } catch (e) {
+        console.error("Spotify search failed, falling back to Deezer:", e);
+      }
+    }
+
+    // Fallback to Deezer search
+    const response = await axios.get(`https://api.deezer.com/search/playlist`, {
+      params: { q: query, limit: 5 }
     });
 
-    const playlists = response.data.playlists.items.map((item: any) => ({
-      id: item.id,
-      name: item.name,
-      owner: { display_name: item.owner.display_name },
-      images: item.images
+    const playlists = response.data.data.map((item: any) => ({
+      id: item.id.toString(),
+      name: item.title,
+      owner: { display_name: item.user.name },
+      images: [{ url: item.picture_xl || item.picture_medium }],
+      url: item.link
     }));
 
     res.json(playlists);
@@ -264,7 +383,7 @@ app.post("/api/playlist/search", async (req, res) => {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("create_room", ({ name }) => {
+  socket.on("create_room", ({ name, category }) => {
     const roomId = generateRoomCode();
     rooms[roomId] = {
       id: roomId,
@@ -272,13 +391,17 @@ io.on("connection", (socket) => {
         [socket.id]: { id: socket.id, name, score: 0, isHost: true }
       },
       state: "LOBBY",
+      category: category || "MUSIC",
       settings: { 
         guessTime: 15, 
         numTracks: 5, 
         playlistUrl: "", 
         gameMode: "TYPING", 
         guessTarget: "BOTH",
-        intermissionTime: 8
+        intermissionTime: 8,
+        movieGenre: "Action/Drama",
+        cartoonSource: "Disney/CN",
+        landmarkRegion: "Global"
       },
       tracks: [],
       currentTrackIndex: -1,
@@ -315,74 +438,128 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("start_game", async ({ roomId, playlistId, userToken }) => {
+  socket.on("reset_to_lobby", ({ roomId }) => {
+    const room = rooms[roomId];
+    if (room && room.players[socket.id]?.isHost) {
+      room.state = "LOBBY";
+      room.currentTrackIndex = -1;
+      room.tracks = [];
+      room.guessesThisRound = {};
+      room.bufferedPlayers = new Set();
+      if (room.roundTimeout) clearTimeout(room.roundTimeout);
+      
+      // Reset scores? Usually yes for a new game
+      Object.values(room.players).forEach(p => p.score = 0);
+      
+      io.to(roomId).emit("room_update", room);
+    }
+  });
+
+  socket.on("start_game", async ({ roomId, playlistId, userToken, trackIds, customTracks }) => {
     const room = rooms[roomId];
     if (!room || !room.players[socket.id]?.isHost) return;
 
     try {
-      io.to(roomId).emit("game_status", "Fetching tracks from Spotify...");
+      io.to(roomId).emit("game_status", "Initializing Sequence...");
       
-      // Try scraping first (bypasses all API restrictions)
       let tracks: Track[] = [];
-      const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
-      
-      if (scrapedTracks && scrapedTracks.length > 0) {
-        tracks = scrapedTracks;
-      } else {
-        // Fallback to API if scraping fails
-        const token = userToken || await getSpotifyToken();
-        const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        if (!response.data.tracks || !response.data.tracks.items) {
-          throw new Error("No tracks found in this playlist or access denied.");
+
+      if (room.category === "MUSIC") {
+        io.to(roomId).emit("game_status", "Fetching tracks...");
+        if (playlistId.includes("music.apple.com")) {
+          const scrapedTracks = await scrapeAppleMusicPlaylist(playlistId);
+          if (scrapedTracks) tracks = scrapedTracks;
+        } else {
+          // Deep fetch for Spotify if possible
+          const token = userToken || await getSpotifyToken();
+          if (token && playlistId) {
+            try {
+              const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+                headers: { Authorization: `Bearer ${token}` },
+                params: { limit: 100 } // Get more tracks
+              });
+              
+              if (response.data.items) {
+                tracks = response.data.items
+                  .filter((item: any) => item.track)
+                  .map((item: any) => ({
+                    id: item.track.id,
+                    name: item.track.name,
+                    artist: item.track.artists.map((a: any) => a.name).join(", "),
+                    previewUrl: item.track.preview_url || "",
+                    albumArt: item.track.album.images?.[0]?.url || ""
+                  }));
+              }
+            } catch (e) {
+              const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
+              if (scrapedTracks) tracks = scrapedTracks;
+            }
+          } else {
+            const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
+            if (scrapedTracks) tracks = scrapedTracks;
+          }
         }
 
-        const items = response.data.tracks.items;
-        tracks = items
-          .filter((item: any) => item.track)
-          .map((item: any) => ({
-            id: item.track.id,
-            name: item.track.name,
-            artist: item.track.artists.map((a: any) => a.name).join(", "),
-            previewUrl: item.track.preview_url || "",
-            albumArt: item.track.album.images?.[0]?.url || ""
-          }));
+        if (tracks.length === 0) {
+          io.to(roomId).emit("error", "No tracks found in this playlist.");
+          return;
+        }
+
+        // Filter by trackIds if provided
+        if (trackIds && Array.isArray(trackIds)) {
+          tracks = tracks.filter(t => trackIds.includes(t.id));
+        }
+
+        // Shuffle and slice
+        tracks = tracks.sort(() => Math.random() - 0.5).slice(0, room.settings.numTracks);
+        
+        io.to(roomId).emit("game_status", "Fetching previews...");
+        
+        // Fetch previews from Deezer in parallel
+        const tracksWithPreviews = await Promise.all(tracks.map(async (track) => {
+          const deezerData = await getDeezerPreview(track.name, track.artist);
+          return { 
+            ...track, 
+            previewUrl: deezerData?.preview || track.previewUrl || "",
+            albumArt: deezerData?.albumArt || track.albumArt || ""
+          };
+        }));
+
+        tracks = tracksWithPreviews.filter(t => t.previewUrl !== "");
+      } else if (customTracks && Array.isArray(customTracks)) {
+        tracks = customTracks;
       }
 
-      // Shuffle and slice
-      tracks = tracks.sort(() => Math.random() - 0.5).slice(0, room.settings.numTracks);
-      
       if (tracks.length === 0) {
-        io.to(roomId).emit("error", "No tracks found in this playlist.");
+        io.to(roomId).emit("error", "Could not prepare game content. Please try again.");
         return;
       }
 
-      io.to(roomId).emit("game_status", "Fetching previews from Deezer...");
-      
-      // Fetch previews from Deezer in parallel (as requested by user)
-      const tracksWithPreviews = await Promise.all(tracks.map(async (track) => {
-        const deezerData = await getDeezerPreview(track.name, track.artist);
-        // Fallback to Spotify preview if Deezer fails (Deezer blocks some IPs)
-        return { 
-          ...track, 
-          previewUrl: deezerData?.preview || track.previewUrl || "",
-          albumArt: deezerData?.albumArt || track.albumArt || ""
-        };
-      }));
-
-      // Filter out tracks without previews
-      const finalTracks = tracksWithPreviews.filter(t => t.previewUrl !== "");
-
-      if (finalTracks.length === 0) {
-        io.to(roomId).emit("error", "Could not find any playable previews for this playlist.");
-        return;
-      }
-
-      room.tracks = finalTracks;
+      room.tracks = tracks;
       room.currentTrackIndex = 0;
-      startRound(roomId);
+      
+      // Start countdown
+      room.state = "PLAYING"; // Set to playing but with countdown
+      room.countdown = 5;
+      
+      const countdownInterval = setInterval(() => {
+        if (!rooms[roomId]) {
+          clearInterval(countdownInterval);
+          return;
+        }
+        
+        rooms[roomId].countdown!--;
+        io.to(roomId).emit("countdown_tick", rooms[roomId].countdown);
+        
+        if (rooms[roomId].countdown === 0) {
+          clearInterval(countdownInterval);
+          delete rooms[roomId].countdown;
+          startRound(roomId);
+        }
+      }, 1000);
+      
+      io.to(roomId).emit("countdown_start", 5);
+      io.to(roomId).emit("room_update", room);
     } catch (error: any) {
       console.error("Game Start Error:", error.response?.data || error.message);
       let errorMsg = error.response?.data?.error?.message || error.message;
@@ -422,16 +599,26 @@ io.on("connection", (socket) => {
 
       choices = [getChoiceText(currentTrack)];
       const otherTracks = room.tracks.filter(t => t.id !== currentTrack.id);
-      const shuffled = otherTracks.sort(() => 0.5 - Math.random());
+      
+      // Get all possible unique choices from other tracks
+      const allOtherChoices = Array.from(new Set(otherTracks.map(t => getChoiceText(t))))
+        .filter(c => c !== choices[0]);
+      
+      const shuffled = allOtherChoices.sort(() => 0.5 - Math.random());
       for (let i = 0; i < numChoices - 1 && i < shuffled.length; i++) {
-        choices.push(getChoiceText(shuffled[i]));
+        choices.push(shuffled[i]);
       }
-      choices = Array.from(new Set(choices)); // Ensure unique choices
-      while(choices.length < numChoices && shuffled.length > 0) {
-         // if we removed duplicates, just add random strings or more tracks if available
-         choices.push(getChoiceText(shuffled[Math.floor(Math.random() * shuffled.length)]) + " ");
-         choices = Array.from(new Set(choices));
+      
+      // If we still need more choices (rare), add some placeholders or random tracks
+      if (choices.length < numChoices) {
+        const placeholders = ["Unknown Track", "Mystery Artist", "Secret Song", "Hidden Track"];
+        for (let i = 0; choices.length < numChoices && i < placeholders.length; i++) {
+          if (!choices.includes(placeholders[i])) {
+            choices.push(placeholders[i]);
+          }
+        }
       }
+      
       choices = choices.sort(() => 0.5 - Math.random());
     }
 
@@ -572,25 +759,26 @@ io.on("connection", (socket) => {
 
     // Schedule next round or game end
     if (room.currentTrackIndex < room.tracks.length - 1) {
-      let countdown = room.settings.intermissionTime || 8;
-      io.to(roomId).emit("intermission_countdown", countdown);
+      const intermissionDuration = (room.settings.intermissionTime || 8) * 1000;
+      const intermissionEndTime = Date.now() + intermissionDuration;
       
-      const interval = setInterval(() => {
-        countdown--;
-        if (countdown > 0) {
-          io.to(roomId).emit("intermission_countdown", countdown);
-        } else {
-          clearInterval(interval);
-          room.currentTrackIndex++;
-          startRound(roomId);
-        }
-      }, 1000);
+      io.to(roomId).emit("intermission_start", {
+        endTime: intermissionEndTime,
+        duration: room.settings.intermissionTime || 8
+      });
+
+      if (room.roundTimeout) clearTimeout(room.roundTimeout);
+      room.roundTimeout = setTimeout(() => {
+        room.currentTrackIndex++;
+        startRound(roomId);
+      }, intermissionDuration);
     } else {
+      const finalIntermission = 5000;
       setTimeout(() => {
         room.state = "GAME_END";
         io.to(roomId).emit("game_end", room.players);
         io.to(roomId).emit("room_update", room);
-      }, (room.settings.intermissionTime || 8) * 1000);
+      }, finalIntermission);
     }
   }
 

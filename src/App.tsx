@@ -5,6 +5,7 @@ import { Lobby } from './components/Lobby';
 import { Game } from './components/Game';
 import { RoundEnd } from './components/RoundEnd';
 import { GameEnd } from './components/GameEnd';
+import { Countdown } from './components/Countdown';
 import { AudioPlayer } from './components/AudioPlayer';
 import { AlertCircle } from 'lucide-react';
 
@@ -34,6 +35,7 @@ export default function App() {
       )}
 
       <main className="relative z-10 container mx-auto px-4 py-8 min-h-screen flex flex-col items-center justify-center">
+        <Countdown />
         {!room && <Home />}
         {room?.state === 'LOBBY' && <Lobby />}
         {room?.state === 'PLAYING' && <Game />}

@@ -1,5 +1,5 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Melody Match",
+  "description": "A real-time multiplayer music guessing game supporting Spotify and Apple Music.",
   "requestFramePermissions": []
 }

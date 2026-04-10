@@ -1,13 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { Disc3, Send, Clock, Trophy, Check } from 'lucide-react';
+import { Disc3, Send, Clock, Trophy, Check, Sparkles } from 'lucide-react';
 
 export function Game() {
   const { room, currentTrack, roundEndTime, isTimerStarted, roundGuessTarget, actions } = useGameStore();
   const [guess, setGuess] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);
   const [hasGuessed, setHasGuessed] = useState(false);
+  const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (room.countdown > 0) {
+      if (!countdownAudioRef.current) {
+        countdownAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+      }
+      countdownAudioRef.current.currentTime = 0;
+      countdownAudioRef.current.play().catch(() => {});
+    }
+  }, [room.countdown]);
 
   useEffect(() => {
     if (currentTrack) {
@@ -50,15 +61,26 @@ export function Game() {
   
   const target = roundGuessTarget || room.settings.guessTarget;
 
-  if (target === "SONG") {
-    promptText = "Guess the Song!";
-    placeholderText = "Type song name...";
-  } else if (target === "ARTIST") {
-    promptText = "Guess the Artist!";
-    placeholderText = "Type artist name...";
-  } else {
-    promptText = "Guess Song or Artist!";
-    placeholderText = "Type song name or artist...";
+  if (room.category === 'MUSIC') {
+    if (target === "SONG") {
+      promptText = "Guess the Song!";
+      placeholderText = "Type song name...";
+    } else if (target === "ARTIST") {
+      promptText = "Guess the Artist!";
+      placeholderText = "Type artist name...";
+    } else {
+      promptText = "Guess Song or Artist!";
+      placeholderText = "Type song name or artist...";
+    }
+  } else if (room.category === 'MOVIE') {
+    promptText = "Guess the Movie!";
+    placeholderText = "Type movie title...";
+  } else if (room.category === 'CARTOON') {
+    promptText = "Guess the Cartoon!";
+    placeholderText = "Type cartoon name...";
+  } else if (room.category === 'LANDMARK') {
+    promptText = "Guess the Landmark!";
+    placeholderText = "Type landmark name...";
   }
 
   return (
@@ -67,12 +89,37 @@ export function Game() {
       animate={{ opacity: 1 }}
       className="w-full max-w-6xl px-4"
     >
+      <AnimatePresence>
+        {room.countdown > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-2xl"
+          >
+            <motion.div
+              key={room.countdown}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
+              className="text-[12rem] font-black font-mono text-[#1DB954]"
+            >
+              {room.countdown}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header Info */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
         <div className="flex items-center gap-6">
           <div className="relative">
             <div className="w-16 h-16 bg-[#1DB954]/10 rounded-2xl flex items-center justify-center border border-[#1DB954]/20">
-              <Disc3 className="text-[#1DB954] animate-spin-slow" size={32} />
+              {room.category === 'MUSIC' ? (
+                <Disc3 className="text-[#1DB954] animate-spin-slow" size={32} />
+              ) : (
+                <Sparkles className="text-[#1DB954]" size={32} />
+              )}
             </div>
             <div className="absolute -top-2 -right-2 bg-[#1DB954] text-black text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
               LIVE
@@ -81,7 +128,7 @@ export function Game() {
           <div>
             <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40 mb-1">Transmission Status</p>
             <p className="text-2xl font-bold tracking-tight">
-              Track <span className="text-[#1DB954] font-mono">{(room.currentTrackIndex + 1).toString().padStart(2, '0')}</span>
+              {room.category === 'MUSIC' ? 'Track' : 'Round'} <span className="text-[#1DB954] font-mono">{(room.currentTrackIndex + 1).toString().padStart(2, '0')}</span>
               <span className="text-white/20 mx-3">/</span>
               <span className="text-white/40 font-mono">{room.tracks.length.toString().padStart(2, '0')}</span>
             </p>
@@ -126,25 +173,27 @@ export function Game() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Main Interface */}
         <div className="lg:col-span-8 space-y-8">
-          <div className="bg-[#151619] border border-white/10 rounded-[2rem] p-8 md:p-16 flex flex-col items-center justify-center min-h-[450px] relative overflow-hidden shadow-2xl">
-            {/* Immersive Visualizer */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="flex items-end gap-1 h-32 opacity-20">
-                {[...Array(20)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ height: [20, 80, 40, 100, 30] }}
-                    transition={{ 
-                      repeat: Infinity, 
-                      duration: 1 + Math.random(),
-                      delay: i * 0.1
-                    }}
-                    className="w-1 bg-[#1DB954] rounded-full"
-                  />
-                ))}
+          <div className="bg-[#151619] border border-white/10 rounded-[2rem] p-8 md:p-12 flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden shadow-2xl">
+            {/* Immersive Visualizer (Only for Music) */}
+            {room.category === 'MUSIC' && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="flex items-end gap-1 h-32 opacity-20">
+                  {[...Array(20)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      animate={{ height: [20, 80, 40, 100, 30] }}
+                      transition={{ 
+                        repeat: Infinity, 
+                        duration: 1 + Math.random(),
+                        delay: i * 0.1
+                      }}
+                      className="w-1 bg-[#1DB954] rounded-full"
+                    />
+                  ))}
+                </div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(29,185,84,0.1)_0%,_transparent_70%)]" />
               </div>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(29,185,84,0.1)_0%,_transparent_70%)]" />
-            </div>
+            )}
 
             <AnimatePresence mode="wait">
               {!hasGuessed ? (
@@ -153,9 +202,38 @@ export function Game() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 1.05 }}
-                  className="w-full max-w-lg relative z-10"
+                  className="w-full max-w-2xl relative z-10 flex flex-col items-center"
                 >
-                  <div className="text-center mb-12">
+                  {/* Clue Display */}
+                  {currentTrack.imageUrl && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="w-full aspect-video rounded-3xl overflow-hidden mb-8 border border-white/10 shadow-2xl relative group"
+                    >
+                      <img 
+                        src={currentTrack.imageUrl} 
+                        alt="Clue" 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </motion.div>
+                  )}
+
+                  {currentTrack.description && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="bg-white/5 backdrop-blur-md border border-white/10 p-6 rounded-2xl mb-8 text-center"
+                    >
+                      <p className="text-lg md:text-xl text-white/90 font-medium leading-relaxed italic">
+                        "{currentTrack.description}"
+                      </p>
+                    </motion.div>
+                  )}
+
+                  <div className="text-center mb-10">
                     <p className="text-[10px] font-mono uppercase tracking-[0.5em] text-[#1DB954] mb-4">Incoming Signal</p>
                     <h2 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-none">
                       {promptText}
@@ -163,7 +241,7 @@ export function Game() {
                   </div>
                   
                   {currentTrack.choices ? (
-                    <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                       {currentTrack.choices.map((choice, idx) => (
                         <motion.button
                           key={idx}
@@ -173,7 +251,7 @@ export function Game() {
                             actions.submitGuess(choice);
                             setHasGuessed(true);
                           }}
-                          className="w-full bg-white/[0.03] border border-white/10 hover:border-[#1DB954]/50 hover:bg-[#1DB954]/5 rounded-2xl px-8 py-5 text-lg text-white font-medium text-left transition-all flex items-center justify-between group"
+                          className="w-full bg-white/[0.03] border border-white/10 hover:border-[#1DB954]/50 hover:bg-[#1DB954]/5 rounded-2xl px-8 py-5 text-sm text-white font-medium text-left transition-all flex items-center justify-between group"
                         >
                           <span className="truncate pr-4">{choice}</span>
                           <div className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center group-hover:border-[#1DB954] transition-colors">
@@ -183,7 +261,7 @@ export function Game() {
                       ))}
                     </div>
                   ) : (
-                    <form onSubmit={handleSubmit} className="relative group">
+                    <form onSubmit={handleSubmit} className="relative group w-full max-w-lg">
                       <div className="absolute -inset-1 bg-gradient-to-r from-[#1DB954]/20 to-transparent rounded-[2.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
                       <input
                         type="text"
@@ -239,23 +317,36 @@ export function Game() {
             </div>
             
             <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2">
-              {playersList.map((p, index) => (
-                <motion.div 
-                  key={p.id}
-                  layout
-                  className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${index === 0 ? 'bg-[#1DB954]/5 border-[#1DB954]/20' : 'bg-white/[0.02] border-white/5'}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <span className={`text-xs font-mono font-bold w-6 ${index === 0 ? 'text-[#1DB954]' : 'text-white/20'}`}>
-                      {(index + 1).toString().padStart(2, '0')}
-                    </span>
-                    <span className={`font-medium truncate max-w-[140px] ${index === 0 ? 'text-white' : 'text-white/60'}`}>{p.name}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-mono font-bold text-lg ${index === 0 ? 'text-[#1DB954]' : 'text-white/40'}`}>{p.score}</span>
-                  </div>
-                </motion.div>
-              ))}
+              <AnimatePresence mode="popLayout">
+                {playersList.map((p, index) => (
+                  <motion.div 
+                    key={p.id}
+                    layout
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${index === 0 ? 'bg-[#1DB954]/5 border-[#1DB954]/20' : 'bg-white/[0.02] border-white/5'}`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className={`text-xs font-mono font-bold w-6 ${index === 0 ? 'text-[#1DB954]' : 'text-white/20'}`}>
+                        {(index + 1).toString().padStart(2, '0')}
+                      </span>
+                      <span className={`font-medium truncate max-w-[140px] ${index === 0 ? 'text-white' : 'text-white/60'}`}>{p.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <motion.span 
+                        key={p.score}
+                        initial={{ scale: 1.2, color: '#1DB954' }}
+                        animate={{ scale: 1, color: index === 0 ? '#1DB954' : 'rgba(255,255,255,0.4)' }}
+                        className="font-mono font-bold text-lg"
+                      >
+                        {p.score}
+                      </motion.span>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           </div>
         </div>

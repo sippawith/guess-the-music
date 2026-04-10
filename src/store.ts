@@ -9,10 +9,21 @@ interface Player {
   isHost: boolean;
 }
 
+interface Track {
+  id: string;
+  name: string;
+  artist: string;
+  previewUrl: string;
+  albumArt: string;
+  imageUrl?: string;
+  description?: string;
+}
+
 interface Room {
   id: string;
   players: Record<string, Player>;
   state: "LOBBY" | "PLAYING" | "ROUND_END" | "GAME_END";
+  category: "MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK";
   settings: {
     guessTime: number;
     numTracks: number;
@@ -20,9 +31,14 @@ interface Room {
     gameMode: "TYPING" | "CHOICE_4" | "CHOICE_5";
     guessTarget: "SONG" | "ARTIST" | "BOTH";
     intermissionTime: number;
+    movieGenre?: string;
+    cartoonSource?: string;
+    landmarkRegion?: string;
   };
   tracks: any[];
   currentTrackIndex: number;
+  gameStatus?: string;
+  countdown: number;
   roundGuessTarget?: "SONG" | "ARTIST";
 }
 
@@ -32,11 +48,20 @@ interface GameState {
   playerName: string;
   room: Room | null;
   error: string | null;
+  gameStatus: string | null;
   
   userToken: string | null;
   
   // Round specific
-  currentTrack: { previewUrl: string; duration: number; startTime?: number; choices?: string[]; roundGuessTarget?: "SONG" | "ARTIST" } | null;
+  currentTrack: { 
+    previewUrl?: string; 
+    imageUrl?: string;
+    description?: string;
+    duration: number; 
+    startTime?: number; 
+    choices?: string[]; 
+    roundGuessTarget?: "SONG" | "ARTIST" 
+  } | null;
   roundStartTime: number;
   roundEndTime: number;
   isTimerStarted: boolean;
@@ -44,8 +69,12 @@ interface GameState {
   totalTracks: number;
   roundGuessTarget: "SONG" | "ARTIST" | null;
   
+  // Countdown
+  countdown: number | null;
+  
   // Round end specific
-  intermissionCountdown: number | null;
+  intermissionEndTime: number | null;
+  intermissionDuration: number | null;
   lastRoundResult: {
     track: { name: string; artist: string; albumArt: string };
     guesses: Record<string, { guess: string; time: number; correct: boolean }>;
@@ -56,10 +85,11 @@ interface GameState {
     setUserToken: (token: string) => void;
     connect: () => void;
     setName: (name: string) => void;
-    createRoom: () => void;
+    createRoom: (category: Room['category']) => void;
     joinRoom: (roomId: string) => void;
     updateSettings: (settings: Partial<Room['settings']>) => void;
-    startGame: (playlistId: string) => void;
+    startGame: (playlistId: string, trackIds?: string[], customTracks?: Track[]) => void;
+    resetToLobby: () => void;
     submitGuess: (guess: string) => void;
     clearError: () => void;
     trackPlaying: () => void;
@@ -72,6 +102,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   playerName: '',
   room: null,
   error: null,
+  gameStatus: null,
   
   userToken: null,
   
@@ -83,7 +114,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   totalTracks: 0,
   roundGuessTarget: null,
   
-  intermissionCountdown: null,
+  countdown: null,
+  
+  intermissionEndTime: null,
+  intermissionDuration: null,
   lastRoundResult: null,
 
   actions: {
@@ -100,7 +134,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       });
 
       socket.on('error', (error) => {
-        set({ error });
+        set({ error, gameStatus: null });
+      });
+
+      socket.on('game_status', (status) => {
+        set({ gameStatus: status });
       });
 
       socket.on('round_start', (data) => {
@@ -113,8 +151,19 @@ export const useGameStore = create<GameState>((set, get) => ({
           totalTracks: data.totalTracks,
           roundGuessTarget: data.track.roundGuessTarget || null,
           lastRoundResult: null,
-          intermissionCountdown: null
+          intermissionEndTime: null,
+          intermissionDuration: null,
+          countdown: null,
+          gameStatus: null
         });
+      });
+
+      socket.on('countdown_start', (count) => {
+        set({ countdown: count });
+      });
+
+      socket.on('countdown_tick', (count) => {
+        set({ countdown: count });
       });
 
       socket.on('start_timer', (endTime) => {
@@ -125,8 +174,11 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
       });
 
-      socket.on('intermission_countdown', (countdown) => {
-        set({ intermissionCountdown: countdown });
+      socket.on('intermission_start', (data) => {
+        set({ 
+          intermissionEndTime: data.endTime,
+          intermissionDuration: data.duration
+        });
       });
 
       socket.on('round_end', (data) => {
@@ -142,10 +194,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     setName: (name) => set({ playerName: name }),
     
-    createRoom: () => {
+    createRoom: (category) => {
       const { socket, playerName } = get();
       if (socket && playerName) {
-        socket.emit('create_room', { name: playerName });
+        socket.emit('create_room', { name: playerName, category });
       }
     },
     
@@ -164,10 +216,17 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     },
     
-    startGame: (playlistId) => {
+    startGame: (playlistId, trackIds, customTracks) => {
       const { socket, roomId, userToken } = get();
       if (socket && roomId) {
-        socket.emit('start_game', { roomId, playlistId, userToken });
+        socket.emit('start_game', { roomId, playlistId, userToken, trackIds, customTracks });
+      }
+    },
+    
+    resetToLobby: () => {
+      const { socket, roomId } = get();
+      if (socket && roomId) {
+        socket.emit('reset_to_lobby', { roomId });
       }
     },
     

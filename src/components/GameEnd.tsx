@@ -35,6 +35,8 @@ export function GameEnd() {
   const playersList = Object.values(room.players).sort((a, b) => b.score - a.score);
   const winner = playersList[0];
 
+  const isHost = room.players[useGameStore.getState().socket?.id || '']?.isHost;
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -74,13 +76,19 @@ export function GameEnd() {
         </div>
       </div>
 
-      <button
-        onClick={() => window.location.reload()}
-        className="bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-8 rounded-xl inline-flex items-center gap-2 transition-all"
-      >
-        <Home size={20} />
-        RETURN TO LOBBY
-      </button>
+      {isHost ? (
+        <button
+          onClick={() => actions.resetToLobby()}
+          className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold py-4 px-12 rounded-xl inline-flex items-center gap-2 transition-all shadow-[0_10px_30px_rgba(29,185,84,0.3)] hover:-translate-y-1 active:translate-y-0"
+        >
+          <Home size={20} />
+          PLAY AGAIN
+        </button>
+      ) : (
+        <p className="text-white/40 font-mono text-sm uppercase tracking-widest">
+          Waiting for host to restart game...
+        </p>
+      )}
     </motion.div>
   );
 }
