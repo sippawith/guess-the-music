@@ -9,6 +9,15 @@ interface Player {
   isHost: boolean;
 }
 
+interface LikedTrack {
+  id: string;
+  name: string;
+  artist: string;
+  albumArt: string;
+  imageUrl?: string;
+  description?: string;
+}
+
 interface Track {
   id: string;
   name: string;
@@ -52,6 +61,7 @@ interface GameState {
   room: Room | null;
   error: string | null;
   gameStatus: string | null;
+  likedTracks: LikedTrack[];
   
   userToken: string | null;
   
@@ -101,6 +111,8 @@ interface GameState {
     leaveRoom: () => void;
     clearError: () => void;
     trackPlaying: () => void;
+    likeTrack: (track: LikedTrack) => void;
+    unlikeTrack: (trackId: string) => void;
   };
 }
 
@@ -111,6 +123,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   room: null,
   error: null,
   gameStatus: null,
+  likedTracks: [],
   
   userToken: null,
   
@@ -250,15 +263,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     },
     
     submitGuess: (guess) => {
-      const { socket, roomId, isTimerStarted } = get();
-      if (socket && roomId && isTimerStarted) {
+      const { socket, roomId } = get();
+      if (socket && roomId) {
         socket.emit('submit_guess', { roomId, guess });
       }
     },
     
     getHint: () => {
-      const { socket, roomId, isTimerStarted } = get();
-      if (socket && roomId && isTimerStarted) {
+      const { socket, roomId } = get();
+      if (socket && roomId) {
         socket.emit('get_hint', { roomId });
       }
     },
@@ -278,6 +291,14 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (socket && roomId) {
         socket.emit('track_playing', { roomId });
       }
-    }
+    },
+    likeTrack: (track: LikedTrack) => set((state) => ({
+      likedTracks: state.likedTracks.find(t => t.id === track.id) 
+        ? state.likedTracks 
+        : [...state.likedTracks, track]
+    })),
+    unlikeTrack: (trackId: string) => set((state) => ({
+      likedTracks: state.likedTracks.filter(t => t.id !== trackId)
+    }))
   }
 }));

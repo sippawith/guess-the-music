@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store';
 import { motion } from 'motion/react';
-import { CheckCircle2, XCircle, Trophy, Music, Clock, Globe, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, XCircle, Trophy, Music, Clock, Globe, ArrowLeft, Heart } from 'lucide-react';
 
 export function RoundEnd() {
-  const { lastRoundResult, intermissionEndTime, intermissionDuration, room, actions } = useGameStore();
+  const { lastRoundResult, intermissionEndTime, intermissionDuration, room, actions, likedTracks } = useGameStore();
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
@@ -80,6 +80,27 @@ export function RoundEnd() {
                   <p className="text-[10px] font-mono text-[#1DB954] uppercase tracking-[0.3em] mb-3">
                     {room.category === 'MUSIC' ? 'Track Identity' : room.category === 'LANDMARK' ? 'Location Identity' : 'Subject Identity'}
                   </p>
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="text-[10px] font-mono text-[#1DB954] uppercase tracking-[0.3em]">
+                      {room.category === 'MUSIC' ? 'Track Identity' : room.category === 'LANDMARK' ? 'Location Identity' : 'Subject Identity'}
+                    </p>
+                    <button
+                      onClick={() => {
+                        const likedTrack = {
+                          id: track.name + track.artist, // Use name+artist as ID since track object doesn't have ID
+                          name: track.name,
+                          artist: track.artist,
+                          albumArt: track.albumArt
+                        };
+                        const isLiked = likedTracks.some(t => t.id === likedTrack.id);
+                        if (isLiked) actions.unlikeTrack(likedTrack.id);
+                        else actions.likeTrack(likedTrack);
+                      }}
+                      className={`p-3 rounded-full transition-all flex-shrink-0 ${likedTracks.some(t => t.id === track.name + track.artist) ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'}`}
+                    >
+                      <Heart size={20} fill={likedTracks.some(t => t.id === track.name + track.artist) ? "currentColor" : "none"} />
+                    </button>
+                  </div>
                   <h3 className="text-3xl md:text-4xl font-black text-white mb-2 leading-tight">
                     {track.name}
                   </h3>

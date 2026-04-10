@@ -5,7 +5,7 @@ import { Trophy, Home, ArrowLeft } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export function GameEnd() {
-  const { room, actions } = useGameStore();
+  const { room, actions, likedTracks } = useGameStore();
 
   useEffect(() => {
     // Trigger confetti on mount
@@ -63,6 +63,23 @@ export function GameEnd() {
         <p className="text-2xl text-white/80 mb-12">
           <span className="text-[#1DB954] font-bold">{winner.name}</span> wins with {winner.score} points!
         </p>
+      )}
+
+      {likedTracks.length > 0 && (
+        <div className="mt-12 text-left mb-12">
+          <h2 className="text-2xl font-bold mb-6 text-white/80">Liked Tracks</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {likedTracks.map(track => (
+              <div key={track.id} className="bg-white/5 p-4 rounded-xl border border-white/10 flex items-center gap-4">
+                <img src={track.albumArt} alt={track.name} className="w-12 h-12 rounded-lg object-cover" />
+                <div>
+                  <p className="font-bold">{track.name}</p>
+                  <p className="text-sm text-white/60">{track.artist}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="bg-white/5 backdrop-blur-xl p-8 rounded-3xl border border-white/10 mb-12">
