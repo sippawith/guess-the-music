@@ -34,7 +34,7 @@ export function RoundEnd() {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="w-full max-w-7xl px-4 py-8"
+      className="w-full max-w-7xl px-4 py-4"
     >
       <button 
         onClick={() => actions.leaveRoom()}
@@ -45,13 +45,13 @@ export function RoundEnd() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Header Section */}
-        <div className="lg:col-span-12 mb-8">
-          <div className="flex flex-col md:flex-row items-end justify-between gap-6 border-b-4 border-vox-black pb-6">
+        <div className="lg:col-span-12 mb-4">
+          <div className="flex flex-col md:flex-row items-end justify-between gap-4 border-b-4 border-vox-black pb-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="handwritten text-xl -rotate-3 block text-vox-black">{t.roundResults}</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="handwritten text-lg -rotate-3 block text-vox-black">{t.roundResults}</span>
               </div>
-              <h1 className="vox-title text-6xl md:text-8xl text-vox-black">
+              <h1 className="vox-title text-5xl md:text-7xl text-vox-black">
                 {t.data.split(' ')[0]} <span className="bg-vox-yellow px-4 text-black">{t.revealed}</span>
               </h1>
             </div>
@@ -88,16 +88,16 @@ export function RoundEnd() {
 
         {/* Left Column: Track Reveal */}
         <div className="lg:col-span-7">
-          <div className="vox-card h-full relative overflow-visible flex flex-col justify-center p-12">
+          <div className="vox-card h-full relative overflow-visible flex flex-col justify-center p-8">
             <div className="tape -top-4 -left-4" />
             
-            <div className="flex flex-col md:flex-row items-center gap-12">
+            <div className="flex flex-col md:flex-row items-center gap-8">
               <motion.div 
                 initial={{ scale: 0.9, opacity: 0, rotate: -5 }}
                 animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                className="relative"
+                className="relative flex-shrink-0"
               >
-                <div className="w-64 h-64 md:w-80 md:h-80 border-4 border-vox-black shadow-vox-lg overflow-hidden relative bg-vox-paper">
+                <div className="w-48 h-48 md:w-64 md:h-64 border-4 border-vox-black shadow-vox-lg overflow-hidden relative bg-vox-paper">
                   {track.albumArt ? (
                     <img src={track.albumArt} alt="Album Art" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
@@ -139,23 +139,23 @@ export function RoundEnd() {
                     </button>
                   </div>
                   
-                  <h3 className="vox-title text-5xl md:text-7xl mb-4 leading-none text-vox-black">
+                  <h3 className="vox-title text-4xl md:text-5xl mb-2 leading-none text-vox-black line-clamp-2">
                     {track.name}
                   </h3>
-                  <p className="font-serif italic text-3xl text-vox-black/60 mb-10">
+                  <p className="font-serif italic text-xl text-vox-black/60 mb-6 line-clamp-1">
                     {track.artist}
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-vox-paper border-2 border-vox-black">
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1 text-vox-black">{t.accuracy}</p>
-                      <p className="text-2xl font-black text-vox-black">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-vox-paper border-2 border-vox-black min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1 text-vox-black truncate">{t.accuracy}</p>
+                      <p className="text-xl font-black text-vox-black truncate">
                         {Math.round((Object.values(guesses).filter(g => g.correct).length / playersList.length) * 100)}%
                       </p>
                     </div>
-                    <div className="p-4 bg-vox-paper border-2 border-vox-black">
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1 text-vox-black">{t.topSpeed}</p>
-                      <p className="text-2xl font-black text-vox-black">
+                    <div className="p-3 bg-vox-paper border-2 border-vox-black min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1 text-vox-black truncate">{t.topSpeed}</p>
+                      <p className="text-xl font-black text-vox-black truncate">
                         {Object.values(guesses).some(g => g.correct) 
                           ? ((Math.min(...Object.values(guesses).filter(g => g.correct).map(g => g.time)) - lastRoundResult.roundStartTime) / 1000).toFixed(1) + 's'
                           : 'N/A'}

@@ -20,26 +20,26 @@ export function Countdown() {
   if (countdown === null) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-vox-paper/80 backdrop-blur-xl">
       <AnimatePresence mode="wait">
         <motion.div
           key={countdown}
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1.2, opacity: 1 }}
-          exit={{ scale: 2, opacity: 0 }}
-          transition={{ duration: 0.5, ease: "backOut" }}
+          initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
+          animate={{ scale: 1, opacity: 1, rotate: 0 }}
+          exit={{ scale: 1.5, opacity: 0, rotate: 20 }}
+          transition={{ duration: 0.4, ease: "backOut" }}
           className="relative"
         >
-          <span className="text-[200px] font-black font-['Anton'] text-[#1DB954] drop-shadow-[0_0_30px_rgba(29,185,84,0.5)]">
+          <span className="vox-title text-[15rem] text-vox-black drop-shadow-vox">
             {countdown === 0 ? "GO!" : countdown}
           </span>
           
-          {/* Decorative circles */}
+          {/* Decorative elements */}
           <motion.div 
-            initial={{ scale: 0 }}
-            animate={{ scale: 1.5, opacity: 0 }}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1.2, opacity: 0.2 }}
             transition={{ duration: 0.8, repeat: Infinity }}
-            className="absolute inset-0 border-4 border-[#1DB954] rounded-full"
+            className="absolute inset-0 border-8 border-vox-yellow -z-10"
           />
         </motion.div>
       </AnimatePresence>

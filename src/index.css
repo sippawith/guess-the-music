@@ -15,17 +15,17 @@
 .dark {
   --vox-black: #ffffff;
   --vox-white: #000000;
-  --vox-paper: #121212;
-  --vox-card-bg: #1a1a1a;
-  --vox-text: #ffffff;
-  --vox-grid: rgba(255, 255, 255, 0.03);
-  --vox-red: #ff4d4d;
+  --vox-paper: #0a0a0a;
+  --vox-card-bg: #141414;
+  --vox-text: #f0f0f0;
+  --vox-grid: rgba(255, 255, 255, 0.05);
+  --vox-red: #ff5f5f;
 }
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Kanit", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Fraunces", serif;
-  --font-hand: "Caveat", cursive;
+  --font-hand: "Caveat", "Mali", cursive;
   --font-thai: "Kanit", sans-serif;
   --font-thai-hand: "Mali", cursive;
 
@@ -73,15 +73,15 @@ body {
 }
 
 .vox-button {
-  @apply bg-vox-yellow border-2 border-vox-black shadow-vox px-6 py-3 font-bold uppercase tracking-tighter transition-all text-black;
+  @apply bg-vox-yellow border-2 border-vox-black shadow-vox px-6 py-3 font-bold uppercase tracking-tighter transition-all text-black cursor-pointer;
 }
 
 .vox-button:hover {
-  @apply translate-x-[2px] translate-y-[2px] shadow-none;
+  @apply translate-x-[1px] translate-y-[1px] shadow-[3px_3px_0px_0px_var(--vox-black)];
 }
 
-.vox-button:active {
-  @apply translate-x-[4px] translate-y-[4px] shadow-none scale-95;
+.vox-button:active, .vox-button.selected {
+  @apply translate-x-[4px] translate-y-[4px] shadow-none scale-[0.98] bg-vox-yellow/80;
 }
 
 .vox-title {

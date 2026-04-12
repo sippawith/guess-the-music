@@ -38,7 +38,7 @@ export function GameEnd() {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="w-full max-w-6xl px-4 py-12"
+      className="w-full max-w-6xl px-4 py-6"
     >
       <button 
         onClick={() => actions.leaveRoom()}
@@ -47,19 +47,19 @@ export function GameEnd() {
         <ArrowLeft size={20} />
       </button>
 
-      <div className="text-center mb-20 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-vox-yellow/20 rounded-full blur-3xl -z-10" />
+      <div className="text-center mb-12 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-vox-yellow/20 rounded-full blur-3xl -z-10" />
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: "spring", damping: 12 }}
-          className="inline-flex items-center justify-center w-32 h-32 bg-vox-yellow border-4 border-vox-black shadow-vox-lg mb-8 rotate-6"
+          className="inline-flex items-center justify-center w-24 h-24 bg-vox-yellow border-4 border-vox-black shadow-vox-lg mb-6 rotate-6"
         >
-          <Trophy size={64} />
+          <Trophy size={48} />
         </motion.div>
         <div className="flex flex-col items-center">
-          <span className="handwritten text-2xl mb-2 -rotate-2 text-vox-black">{t.finalStandings}</span>
-          <h1 className="vox-title text-7xl md:text-9xl leading-none mb-4 text-vox-black">
+          <span className="handwritten text-xl mb-1 -rotate-2 text-vox-black">{t.finalStandings}</span>
+          <h1 className="vox-title text-5xl md:text-7xl leading-none mb-2 text-vox-black">
             {t.victory.split(' ')[0]} <span className="bg-vox-yellow px-4 italic text-black">{t.achieved}</span>
           </h1>
         </div>
@@ -67,8 +67,8 @@ export function GameEnd() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Podium Section */}
-        <div className="lg:col-span-8 space-y-12">
-          <div className="grid grid-cols-3 gap-4 items-end min-h-[400px]">
+        <div className="lg:col-span-8 space-y-8">
+          <div className="grid grid-cols-3 gap-4 items-end min-h-[300px]">
             {/* 2nd Place */}
             {playersList[1] && (
               <motion.div 
