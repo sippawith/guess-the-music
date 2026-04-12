@@ -9,6 +9,39 @@ import { MOVIE_CLUES, CARTOON_CLUES, LANDMARK_CLUES } from "./src/data/gameConte
 
 dotenv.config();
 
+// --- Helper Utilities ---
+function shuffleArray<T>(array: T[]): T[] {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}
+
+/**
+ * Selects tracks by spreading the selection across the entire list.
+ * This ensures we get songs from the beginning, middle, and end of the playlist.
+ */
+function selectTracksWithSpread(tracks: any[], count: number): any[] {
+  if (tracks.length <= count) return shuffleArray(tracks);
+  
+  const selected: any[] = [];
+  const step = tracks.length / count;
+  
+  for (let i = 0; i < count; i++) {
+    const start = Math.floor(i * step);
+    const end = Math.floor((i + 1) * step);
+    const bucket = tracks.slice(start, end);
+    if (bucket.length > 0) {
+      const randomIndex = Math.floor(Math.random() * bucket.length);
+      selected.push(bucket[randomIndex]);
+    }
+  }
+  
+  return shuffleArray(selected);
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -62,50 +95,128 @@ async function getSpotifyToken() {
   }
 }
 
-async function getDeezerPreview(trackName: string, artistName: string) {
+async function getItunesPreview(trackName: string, artistName: string) {
   try {
-    const query = `track:"${trackName}" artist:"${artistName}"`;
-    const response = await axios.get(`https://api.deezer.com/search?q=${encodeURIComponent(query)}`);
-    if (response.data.data && response.data.data.length > 0) {
+    // Clean up track name for better search (remove " - Remastered", etc.)
+    const cleanTrackName = trackName.split(' - ')[0].replace(/\[.*?\]|\(.*?\)/g, '').trim();
+    const query = `${cleanTrackName} ${artistName}`;
+    const response = await axios.get(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      },
+      timeout: 5000
+    });
+    
+    if (response.data.results && response.data.results.length > 0) {
+      const result = response.data.results[0];
       return {
-        preview: response.data.data[0].preview,
-        albumArt: response.data.data[0].album?.cover_xl || response.data.data[0].album?.cover_medium || ""
+        preview: result.previewUrl,
+        albumArt: result.artworkUrl100?.replace('100x100bb', '600x600bb') || ""
       };
     }
-    // Fallback to general search if specific search fails
-    const fallbackResponse = await axios.get(`https://api.deezer.com/search?q=${encodeURIComponent(`${trackName} ${artistName}`)}`);
-    if (fallbackResponse.data.data && fallbackResponse.data.data.length > 0) {
-      return {
-        preview: fallbackResponse.data.data[0].preview,
-        albumArt: fallbackResponse.data.data[0].album?.cover_xl || fallbackResponse.data.data[0].album?.cover_medium || ""
-      };
-    }
-  } catch (error) {
-    console.error("Deezer search error:", error);
+  } catch (error: any) {
+    console.error("iTunes search error:", error.response?.status || error.message);
   }
   return null;
 }
 
 async function scrapeSpotifyPlaylist(playlistId: string) {
   try {
-    const res = await axios.get(`https://open.spotify.com/embed/playlist/${playlistId}`);
-    const html = res.data;
-    const match = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-    if (match) {
-      const data = JSON.parse(match[1]);
-      const entity = data.props?.pageProps?.state?.data?.entity;
-      if (entity && entity.trackList) {
-        return entity.trackList.map((t: any) => ({
-          id: t.uri.split(':').pop(),
-          name: t.title,
-          artist: t.subtitle,
-          previewUrl: t.audioPreview?.url || "",
-          albumArt: entity.coverArt?.sources?.[0]?.url || "" // Fallback to playlist cover
-        }));
+    // 1. Get embed token
+    const embedRes = await axios.get(`https://open.spotify.com/embed/playlist/${playlistId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    const match = embedRes.data.match(/"accessToken":"([^"]+)"/);
+    if (!match) {
+      console.log("No access token found in embed");
+      return null;
+    }
+    const token = match[1];
+    
+    // 2. Get client token
+    const tokenRes = await axios.post('https://clienttoken.spotify.com/v1/clienttoken', {
+      client_data: {
+        client_version: "1.2.88.250.gd8cceb8f",
+        client_id: "d8a5ed958d274c2e8ee717e6a4b0971d",
+        js_sdk_data: {
+          device_brand: "unknown",
+          device_model: "unknown",
+          os: "windows",
+          os_version: "NT 10.0",
+          device_id: "unknown",
+          device_type: "computer"
+        }
+      }
+    }, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    const clientToken = tokenRes.data.granted_token.token;
+    
+    const hash = '32b05e92e438438408674f95d0fdad8082865dc32acd55bd97f5113b8579092b';
+    
+    let allTracks: any[] = [];
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+    
+    while (hasMore && allTracks.length < 1000) {
+      const variables = encodeURIComponent(JSON.stringify({
+        uri: `spotify:playlist:${playlistId}`,
+        offset: offset,
+        limit: limit,
+        enableWatchFeedEntrypoint: false,
+        enableSmartRecommendations: false
+      }));
+      const extensions = encodeURIComponent(JSON.stringify({
+        persistedQuery: {
+          version: 1,
+          sha256Hash: hash
+        }
+      }));
+      
+      const url = `https://api-partner.spotify.com/pathfinder/v1/query?operationName=fetchPlaylist&variables=${variables}&extensions=${extensions}`;
+      
+      const res = await axios.get(url, {
+        headers: {
+          'Client-Token': clientToken,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const items = res.data?.data?.playlistV2?.content?.items;
+      if (!items || items.length === 0) {
+        hasMore = false;
+        break;
+      }
+      
+      for (const item of items) {
+        const trackData = item.itemV2?.data;
+        if (trackData && trackData.__typename === 'Track') {
+          allTracks.push({
+            id: trackData.uri.split(':').pop(),
+            name: trackData.name,
+            artist: trackData.artists?.items?.[0]?.profile?.name || "Unknown Artist",
+            previewUrl: "", // We'll rely on Deezer fallback
+            albumArt: trackData.albumOfTrack?.coverArt?.sources?.[0]?.url || ""
+          });
+        }
+      }
+      
+      offset += limit;
+      if (items.length < limit) {
+        hasMore = false;
       }
     }
+    
+    return allTracks;
   } catch (error) {
-    console.error("Error scraping Spotify embed:", error);
+    console.error("Error scraping Spotify playlist via Pathfinder:", error);
   }
   return null;
 }
@@ -211,8 +322,17 @@ interface Player {
   id: string;
   name: string;
   score: number;
+  prevScore: number;
   lastGuess?: string;
   isHost: boolean;
+  streak: number;
+  maxStreak: number;
+  abilities: {
+    hint: number;
+    removeWrong: number;
+    freeze: number;
+  };
+  freezeActiveUntil?: number;
 }
 
 interface Track {
@@ -243,6 +363,8 @@ interface Room {
     cartoonSource?: string;
     landmarkRegion?: string;
     hintsPerGame: number;
+    abilitiesEnabled: boolean;
+    abilitiesPerGame: number;
   };
   tracks: Track[];
   currentTrackIndex: number;
@@ -342,6 +464,30 @@ app.post("/api/playlist/tracks", async (req, res) => {
   }
 });
 
+app.post("/api/playlist/tracks/page", async (req, res) => {
+  try {
+    const { url } = req.body;
+    const userToken = req.headers.authorization?.split(' ')[1];
+    const token = userToken || await getSpotifyToken();
+    if (!token) return res.status(401).json({ error: "Unauthorized" });
+
+    const response = await axios.get(url, {
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    res.json(response.data);
+  } catch (error: any) {
+    if (error.response?.status === 403) {
+      console.warn("Spotify API 403 - Forbidden. This may happen if the playlist is restricted or the token is invalid.");
+    } else {
+      console.error("Error fetching Spotify page:", error.response?.data || error.message);
+    }
+    res.status(error.response?.status || 500).json({ error: error.message });
+  }
+});
+
 app.post("/api/playlist/search", async (req, res) => {
   try {
     const { query } = req.body;
@@ -398,7 +544,16 @@ io.on("connection", (socket) => {
     rooms[roomId] = {
       id: roomId,
       players: {
-        [socket.id]: { id: socket.id, name, score: 0, isHost: true }
+        [socket.id]: { 
+          id: socket.id, 
+          name, 
+          score: 0, 
+          prevScore: 0,
+          isHost: true,
+          streak: 0,
+          maxStreak: 0,
+          abilities: { hint: 3, removeWrong: 3, freeze: 3 }
+        }
       },
       state: "LOBBY",
       category: category || "MUSIC",
@@ -414,7 +569,9 @@ io.on("connection", (socket) => {
         movieGenre: "Action/Drama",
         cartoonSource: "Disney/CN",
         landmarkRegion: "Global",
-        hintsPerGame: 3
+        hintsPerGame: 3,
+        abilitiesEnabled: true,
+        abilitiesPerGame: 3
       },
       tracks: [],
       currentTrackIndex: -1,
@@ -438,7 +595,20 @@ io.on("connection", (socket) => {
       return;
     }
     
-    room.players[socket.id] = { id: socket.id, name, score: 0, isHost: false };
+    room.players[socket.id] = { 
+      id: socket.id, 
+      name, 
+      score: 0, 
+      prevScore: 0,
+      isHost: false,
+      streak: 0,
+      maxStreak: 0,
+      abilities: { 
+        hint: room.settings.abilitiesPerGame || 3, 
+        removeWrong: room.settings.abilitiesPerGame || 3, 
+        freeze: room.settings.abilitiesPerGame || 3 
+      }
+    };
     socket.join(roomId);
     io.to(roomId).emit("room_update", getPublicRoom(room));
   });
@@ -497,7 +667,10 @@ io.on("connection", (socket) => {
 
       if (room.category === "MUSIC") {
         io.to(roomId).emit("game_status", "Fetching tracks...");
-        if (playlistId.includes("music.apple.com")) {
+        
+        if (customTracks && Array.isArray(customTracks) && customTracks.length > 0) {
+          tracks = customTracks;
+        } else if (playlistId.includes("music.apple.com")) {
           const scrapedTracks = await scrapeAppleMusicPlaylist(playlistId);
           if (scrapedTracks) tracks = scrapedTracks;
         } else {
@@ -505,13 +678,32 @@ io.on("connection", (socket) => {
           const token = userToken || await getSpotifyToken();
           if (token && playlistId) {
             try {
-              const response = await axios.get(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
-                headers: { Authorization: `Bearer ${token}` },
-                params: { limit: 100 } // Get more tracks
-              });
+              let allItems: any[] = [];
+              let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
               
-              if (response.data.items) {
-                tracks = response.data.items
+              while (nextUrl && allItems.length < 1000) { // Limit to 1000 tracks to prevent excessive API calls
+                try {
+                  const response = await axios.get(nextUrl, {
+                    headers: { Authorization: `Bearer ${token}` }
+                  });
+                  
+                  if (response.data.items) {
+                    allItems = allItems.concat(response.data.items);
+                  }
+                  nextUrl = response.data.next;
+                } catch (err: any) {
+                  console.error("Error fetching next page in start_game:", err.response?.data || err.message);
+                  if (allItems.length === 0) {
+                    throw err; // Throw to trigger fallback if no tracks fetched
+                  }
+                  break; // Stop fetching if a page fails but we have some tracks
+                }
+              }
+              
+              console.log(`start_game: Fetched ${allItems.length} items from Spotify API`);
+              
+              if (allItems.length > 0) {
+                tracks = allItems
                   .filter((item: any) => item.track)
                   .map((item: any) => ({
                     id: item.track.id,
@@ -520,17 +712,21 @@ io.on("connection", (socket) => {
                     previewUrl: item.track.preview_url || "",
                     albumArt: item.track.album.images?.[0]?.url || ""
                   }));
+                console.log(`start_game: Mapped to ${tracks.length} tracks`);
               }
             } catch (e) {
+              console.log("start_game: Falling back to scrapeSpotifyPlaylist due to error");
               const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
               if (scrapedTracks) tracks = scrapedTracks;
             }
           } else {
+            console.log("start_game: No token, using scrapeSpotifyPlaylist");
             const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
             if (scrapedTracks) tracks = scrapedTracks;
           }
         }
 
+        console.log(`start_game: Tracks before filtering: ${tracks.length}`);
         if (tracks.length === 0) {
           io.to(roomId).emit("error", "No tracks found in this playlist.");
           return;
@@ -540,30 +736,60 @@ io.on("connection", (socket) => {
         if (trackIds && Array.isArray(trackIds)) {
           tracks = tracks.filter(t => trackIds.includes(t.id));
         }
+      } else if (customTracks && Array.isArray(customTracks)) {
+        tracks = customTracks;
+      }
 
-        // Shuffle and slice
-        tracks = tracks.sort(() => Math.random() - 0.5).slice(0, room.settings.numTracks);
+      // Apply spread logic and fetch previews for all music games
+      if (room.category === 'MUSIC' && tracks.length > 0) {
+        // Shuffle and slice with spread logic to cover the entire playlist
+        // We pick extra tracks to account for potential preview failures
+        const targetCount = room.settings.numTracks;
+        const bufferCount = Math.min(tracks.length, Math.ceil(targetCount * 2.0) + 20);
+        
+        console.log(`start_game: Selecting ${bufferCount} tracks with spread from ${tracks.length} total tracks`);
+        tracks = selectTracksWithSpread(tracks, bufferCount);
         
         io.to(roomId).emit("game_status", "Fetching previews...");
         
-        // Fetch previews from Deezer in parallel
+        // Fetch previews from iTunes in parallel
         const tracksWithPreviews = await Promise.all(tracks.map(async (track) => {
-          const deezerData = await getDeezerPreview(track.name, track.artist);
+          const itunesData = await getItunesPreview(track.name, track.artist);
           return { 
             ...track, 
-            previewUrl: deezerData?.preview || track.previewUrl || "",
-            albumArt: deezerData?.albumArt || track.albumArt || ""
+            previewUrl: itunesData?.preview || track.previewUrl || "",
+            albumArt: itunesData?.albumArt || track.albumArt || ""
           };
         }));
 
-        tracks = tracksWithPreviews.filter(t => t.previewUrl !== "");
-      } else if (customTracks && Array.isArray(customTracks)) {
-        tracks = customTracks;
+        // Filter out tracks that still have no preview and slice to exact targetCount
+        tracks = tracksWithPreviews
+          .filter(t => t.previewUrl !== "")
+          .slice(0, targetCount);
+        
+        console.log(`start_game: Final track count with previews: ${tracks.length} (Target: ${targetCount})`);
+        
+        if (tracks.length === 0) {
+          io.to(roomId).emit("error", "Could not find playable previews for any tracks in this playlist.");
+          return;
+        }
       }
 
       if (tracks.length === 0) {
         io.to(roomId).emit("error", "Could not prepare game content. Please try again.");
         return;
+      }
+
+      // Reset players
+      for (const player of Object.values(room.players)) {
+        player.score = 0;
+        player.streak = 0;
+        player.maxStreak = 0;
+        player.abilities = { 
+          hint: room.settings.abilitiesPerGame || 3, 
+          removeWrong: room.settings.abilitiesPerGame || 3, 
+          freeze: room.settings.abilitiesPerGame || 3 
+        };
       }
 
       room.tracks = tracks;
@@ -572,7 +798,7 @@ io.on("connection", (socket) => {
       
       // Start countdown
       room.state = "PLAYING"; // Set to playing but with countdown
-      room.countdown = 5;
+      room.countdown = 3;
       
       const countdownInterval = setInterval(() => {
         if (!rooms[roomId]) {
@@ -590,7 +816,7 @@ io.on("connection", (socket) => {
         }
       }, 1000);
       
-      io.to(roomId).emit("countdown_start", 5);
+      io.to(roomId).emit("countdown_start", 3);
       io.to(roomId).emit("room_update", getPublicRoom(room));
     } catch (error: any) {
       console.error("Game Start Error:", error.response?.data || error.message);
@@ -727,6 +953,9 @@ io.on("connection", (socket) => {
     const room = rooms[roomId];
     if (!room || room.state !== "PLAYING") return;
     
+    // Don't allow multiple correct guesses if they already have one
+    if (room.guessesThisRound[socket.id]?.correct) return;
+
     const currentTrack = room.tracks[room.currentTrackIndex];
     const normalizedGuess = guess.toLowerCase().trim();
     const normalizedName = currentTrack.name.toLowerCase().trim();
@@ -763,47 +992,74 @@ io.on("connection", (socket) => {
         room.players[socket.id].lastGuess = guess;
     }
 
-    // If everyone guessed, end round early
-    if (Object.keys(room.guessesThisRound).length === Object.keys(room.players).length) {
+    // If everyone got it correct, end round early
+    const correctGuesses = Object.values(room.guessesThisRound).filter(g => g.correct).length;
+    if (correctGuesses === Object.keys(room.players).length) {
       if (room.roundTimeout) clearTimeout(room.roundTimeout);
       endRound(roomId);
     }
   });
 
-  socket.on("get_hint", ({ roomId }) => {
+  socket.on("use_ability", ({ roomId, ability }) => {
     const room = rooms[roomId];
     if (!room || room.state !== "PLAYING") return;
+    const player = room.players[socket.id];
+    if (!player) return;
 
-    const maxHints = room.settings.hintsPerGame || Math.max(1, Math.floor(room.tracks.length * 0.3));
-    if (room.hintsUsed >= maxHints) {
-      socket.emit("error", "No hints remaining!");
+    if (!room.settings.abilitiesEnabled) {
+      socket.emit("error", "Abilities are disabled in this room.");
+      return;
+    }
+
+    if (player.abilities[ability] <= 0) {
+      socket.emit("error", `No ${ability} uses remaining!`);
       return;
     }
 
     const currentTrack = room.tracks[room.currentTrackIndex];
     const target = room.roundGuessTarget;
-    
-    let hint = "";
-    if (room.category === "MUSIC") {
-      if (target === "SONG") {
-        hint = `Artist: ${currentTrack.artist}`;
-      } else if (target === "ARTIST") {
-        hint = `Song: ${currentTrack.name}`;
+
+    if (ability === 'hint') {
+      let hint = "";
+      if (room.category === "MUSIC") {
+        if (target === "SONG") {
+          hint = `Artist: ${currentTrack.artist}`;
+        } else if (target === "ARTIST") {
+          hint = `Song: ${currentTrack.name}`;
+        } else {
+          hint = `Artist: ${currentTrack.artist.substring(0, 3)}...`;
+        }
       } else {
-        hint = `It's by ${currentTrack.artist}`;
+        hint = currentTrack.description?.substring(0, 30) + "..." || `Starts with: ${currentTrack.name.substring(0, 2)}...`;
       }
-    } else {
-      // For movies/cartoons/landmarks, reveal the "artist" (director/creator/region)
-      if (currentTrack.artist) {
-        hint = `Related to: ${currentTrack.artist}`;
+      player.abilities[ability]--;
+      socket.emit("hint_revealed", { hint, playerSpecific: true });
+    } else if (ability === 'removeWrong') {
+      if (room.settings.gameMode.startsWith("CHOICE")) {
+        player.abilities[ability]--;
+        socket.emit("ability_effect", { type: "REMOVE_WRONG", count: 2 });
       } else {
-        const name = currentTrack.name;
-        hint = `Starts with: ${name.substring(0, 2)}...`;
+        socket.emit("error", "This ability only works in Choice modes.");
       }
+    } else if (ability === 'freeze') {
+      player.abilities[ability]--;
+      
+      // Global Freeze: Extend the round end time and update the timeout
+      const freezeDuration = 5000;
+      room.roundEndTime += freezeDuration;
+      
+      if (room.roundTimeout) {
+        clearTimeout(room.roundTimeout);
+        const remaining = Math.max(0, room.roundEndTime - Date.now());
+        room.roundTimeout = setTimeout(() => {
+          endRound(roomId);
+        }, remaining);
+      }
+      
+      io.to(roomId).emit("ability_effect", { type: "FREEZE", duration: freezeDuration });
+      io.to(roomId).emit("start_timer", room.roundEndTime);
     }
 
-    room.hintsUsed++;
-    io.to(roomId).emit("hint_revealed", { hint, hintsUsed: room.hintsUsed, maxHints });
     io.to(roomId).emit("room_update", getPublicRoom(room));
   });
 
@@ -814,32 +1070,45 @@ io.on("connection", (socket) => {
     room.state = "ROUND_END";
     const currentTrack = room.tracks[room.currentTrackIndex];
 
-    // Calculate scores
-    let firstCorrectId: string | null = null;
-    let earliestTime = Infinity;
+    // Calculate scores using time-decay and streaks
+    const totalTime = room.settings.guessTime * 1000;
+    const roundStartTime = room.roundEndTime - totalTime;
 
-    for (const [playerId, guessData] of Object.entries(room.guessesThisRound)) {
-      if (guessData.correct && guessData.time < earliestTime) {
-        earliestTime = guessData.time;
-        firstCorrectId = playerId;
+    for (const playerId of Object.keys(room.players)) {
+      const player = room.players[playerId];
+      player.prevScore = player.score;
+      const guessData = room.guessesThisRound[playerId];
+
+      if (guessData && guessData.correct) {
+        let timeTaken = guessData.time - roundStartTime;
+        
+        // Adjust for freeze ability
+        if (player.freezeActiveUntil && player.freezeActiveUntil > roundStartTime) {
+            const freezeDuration = 5000; // 5 seconds
+            timeTaken = Math.max(0, timeTaken - freezeDuration);
+        }
+
+        const timeLeft = Math.max(0, totalTime - timeTaken);
+        const timeBonus = Math.floor((timeLeft / totalTime) * 100);
+        
+        player.streak++;
+        player.maxStreak = Math.max(player.streak, player.maxStreak);
+        
+        // Streak multiplier: 10% bonus per streak level, max 100% (2x)
+        const streakMultiplier = 1 + Math.min(player.streak - 1, 10) * 0.1;
+        const roundScore = Math.floor((50 + timeBonus) * streakMultiplier);
+        
+        player.score += roundScore;
+      } else {
+        player.streak = 0;
       }
-    }
-
-    if (firstCorrectId && room.players[firstCorrectId]) {
-      room.players[firstCorrectId].score += 100; // Give points to the fastest
-    }
-    
-    // Give partial points to others who got it right?
-    for (const [playerId, guessData] of Object.entries(room.guessesThisRound)) {
-       if (guessData.correct && playerId !== firstCorrectId && room.players[playerId]) {
-           room.players[playerId].score += 50;
-       }
     }
 
     io.to(roomId).emit("round_end", {
       track: currentTrack,
       guesses: room.guessesThisRound,
-      players: room.players
+      players: room.players,
+      roundStartTime
     });
     
     io.to(roomId).emit("room_update", getPublicRoom(room));

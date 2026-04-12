@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store';
-import { motion } from 'motion/react';
-import { CheckCircle2, XCircle, Trophy, Music, Clock, Globe, ArrowLeft, Heart } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { translations } from '../translations';
+import { 
+  CheckCircle2, XCircle, Trophy, Music, Clock, 
+  Globe, ArrowLeft, Heart, Flame, Sparkles, TrendingUp
+} from 'lucide-react';
 
 export function RoundEnd() {
   const { lastRoundResult, intermissionEndTime, intermissionDuration, room, actions, likedTracks } = useGameStore();
+  const t = translations.en;
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
     if (intermissionEndTime) {
       const interval = setInterval(() => {
-        const remaining = Math.max(0, Math.ceil((intermissionEndTime - Date.now()) / 1000));
+        const remaining = Math.max(0, (intermissionEndTime - Date.now()) / 1000);
         setTimeLeft(remaining);
         if (remaining <= 0) clearInterval(interval);
       }, 100);
@@ -23,51 +28,86 @@ export function RoundEnd() {
   const { track, guesses, players } = lastRoundResult;
   const playersList = Object.values(players).sort((a, b) => b.score - a.score);
 
+  const totalIntermission = intermissionDuration || 8;
+
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-6xl px-4 relative"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="w-full max-w-7xl px-4 py-8"
     >
       <button 
         onClick={() => actions.leaveRoom()}
-        className="fixed top-8 left-8 p-3 rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all z-50 backdrop-blur-md"
-        title="Leave Room"
+        className="fixed top-6 left-6 p-3 rounded-2xl bg-vox-white border-2 border-vox-black shadow-vox text-vox-black hover:bg-vox-yellow transition-all z-50"
       >
-        <ArrowLeft size={24} />
+        <ArrowLeft size={20} />
       </button>
 
-      <div className="text-center mb-12">
-        <p className="text-[10px] font-mono uppercase tracking-[0.5em] text-[#1DB954] mb-4">Round Conclusion</p>
-        <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight leading-none">
-          Data Decrypted
-        </h1>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Track Reveal (7 cols) */}
-        <div className="lg:col-span-7">
-          <div className="bg-[#151619] border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              {room.category === 'MUSIC' ? <Music size={200} /> : <Globe size={200} />}
+        {/* Header Section */}
+        <div className="lg:col-span-12 mb-8">
+          <div className="flex flex-col md:flex-row items-end justify-between gap-6 border-b-4 border-vox-black pb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="handwritten text-xl -rotate-3 block text-vox-black">{t.roundResults}</span>
+              </div>
+              <h1 className="vox-title text-6xl md:text-8xl text-vox-black">
+                {t.data.split(' ')[0]} <span className="bg-vox-yellow px-4 text-black">{t.revealed}</span>
+              </h1>
             </div>
+            
+            {timeLeft !== null && (
+              <div className="vox-card py-4 px-8 flex items-center gap-6 relative overflow-visible">
+                <div className="tape -top-3 -right-4 w-12" />
+                <div className="text-right">
+                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40 text-vox-black">{t.nextRoundIn}</p>
+                  <p className="text-3xl font-black text-vox-black">{Math.ceil(timeLeft).toString().padStart(2, '0')}s</p>
+                </div>
+                <div className="w-16 h-16 flex items-center justify-center relative">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 64 64">
+                    <circle
+                      cx="32" cy="32" r="28"
+                      stroke="currentColor" strokeWidth="6" fill="transparent"
+                      className="text-vox-black/5"
+                    />
+                    <motion.circle
+                      cx="32" cy="32" r="28"
+                      stroke="currentColor" strokeWidth="6" fill="transparent"
+                      strokeDasharray={176}
+                      animate={{ strokeDashoffset: 176 - (176 * (timeLeft / totalIntermission)) }}
+                      transition={{ duration: 0.1, ease: "linear" }}
+                      className="text-vox-yellow"
+                    />
+                  </svg>
+                  <Clock size={20} className="absolute text-vox-black" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
-            <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
+        {/* Left Column: Track Reveal */}
+        <div className="lg:col-span-7">
+          <div className="vox-card h-full relative overflow-visible flex flex-col justify-center p-12">
+            <div className="tape -top-4 -left-4" />
+            
+            <div className="flex flex-col md:flex-row items-center gap-12">
               <motion.div 
                 initial={{ scale: 0.9, opacity: 0, rotate: -5 }}
                 animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                transition={{ type: "spring", damping: 15 }}
-                className="relative group"
+                className="relative"
               >
-                <div className="absolute -inset-4 bg-[#1DB954]/20 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="w-56 h-56 md:w-64 md:h-64 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 relative">
+                <div className="w-64 h-64 md:w-80 md:h-80 border-4 border-vox-black shadow-vox-lg overflow-hidden relative bg-vox-paper">
                   {track.albumArt ? (
                     <img src={track.albumArt} alt="Album Art" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
-                    <div className="w-full h-full bg-black/50 flex items-center justify-center">
-                      <Music size={48} className="text-white/10" />
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Music size={80} className="text-vox-black/10" />
                     </div>
                   )}
+                </div>
+                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-vox-yellow border-4 border-vox-black rounded-full flex items-center justify-center shadow-vox rotate-12">
+                  <Music size={24} />
                 </div>
               </motion.div>
               
@@ -77,17 +117,14 @@ export function RoundEnd() {
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <p className="text-[10px] font-mono text-[#1DB954] uppercase tracking-[0.3em] mb-3">
-                    {room.category === 'MUSIC' ? 'Track Identity' : room.category === 'LANDMARK' ? 'Location Identity' : 'Subject Identity'}
-                  </p>
-                  <div className="flex justify-between items-start mb-3">
-                    <p className="text-[10px] font-mono text-[#1DB954] uppercase tracking-[0.3em]">
-                      {room.category === 'MUSIC' ? 'Track Identity' : room.category === 'LANDMARK' ? 'Location Identity' : 'Subject Identity'}
-                    </p>
+                  <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
+                    <span className="bg-vox-black text-vox-white px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+                      {room.category} {t.identity}
+                    </span>
                     <button
                       onClick={() => {
                         const likedTrack = {
-                          id: track.name + track.artist, // Use name+artist as ID since track object doesn't have ID
+                          id: track.name + track.artist,
                           name: track.name,
                           artist: track.artist,
                           albumArt: track.albumArt
@@ -96,55 +133,57 @@ export function RoundEnd() {
                         if (isLiked) actions.unlikeTrack(likedTrack.id);
                         else actions.likeTrack(likedTrack);
                       }}
-                      className={`p-3 rounded-full transition-all flex-shrink-0 ${likedTracks.some(t => t.id === track.name + track.artist) ? 'bg-red-500/20 text-red-500' : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'}`}
+                      className={`p-3 border-2 border-vox-black shadow-vox transition-all ${likedTracks.some(t => t.id === track.name + track.artist) ? 'bg-vox-red text-white' : 'bg-vox-white hover:bg-vox-yellow'}`}
                     >
                       <Heart size={20} fill={likedTracks.some(t => t.id === track.name + track.artist) ? "currentColor" : "none"} />
                     </button>
                   </div>
-                  <h3 className="text-3xl md:text-4xl font-black text-white mb-2 leading-tight">
+                  
+                  <h3 className="vox-title text-5xl md:text-7xl mb-4 leading-none text-vox-black">
                     {track.name}
                   </h3>
-                  <p className="text-xl text-white/40 font-medium mb-8">
+                  <p className="font-serif italic text-3xl text-vox-black/60 mb-10">
                     {track.artist}
                   </p>
-                </motion.div>
 
-                {timeLeft !== null && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="bg-black/40 border border-white/5 rounded-2xl p-6 inline-flex flex-col items-center md:items-start"
-                  >
-                    <p className="text-[9px] font-mono uppercase tracking-widest text-white/30 mb-2 flex items-center gap-2">
-                      <Clock size={10} /> Next Transmission In
-                    </p>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-mono font-bold text-[#1DB954] tabular-nums">
-                        {timeLeft.toString().padStart(2, '0')}
-                      </span>
-                      <span className="text-xs font-mono text-white/20 uppercase">Seconds</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-vox-paper border-2 border-vox-black">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1 text-vox-black">{t.accuracy}</p>
+                      <p className="text-2xl font-black text-vox-black">
+                        {Math.round((Object.values(guesses).filter(g => g.correct).length / playersList.length) * 100)}%
+                      </p>
                     </div>
-                  </motion.div>
-                )}
+                    <div className="p-4 bg-vox-paper border-2 border-vox-black">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-40 mb-1 text-vox-black">{t.topSpeed}</p>
+                      <p className="text-2xl font-black text-vox-black">
+                        {Object.values(guesses).some(g => g.correct) 
+                          ? ((Math.min(...Object.values(guesses).filter(g => g.correct).map(g => g.time)) - lastRoundResult.roundStartTime) / 1000).toFixed(1) + 's'
+                          : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Player Results (5 cols) */}
+        {/* Right Column: Leaderboard */}
         <div className="lg:col-span-5">
-          <div className="bg-[#151619] border border-white/10 rounded-[2.5rem] p-8 h-full shadow-2xl flex flex-col">
+          <div className="vox-card h-full flex flex-col relative overflow-visible">
+            <div className="tape -bottom-4 -right-4 rotate-12" />
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-[10px] font-mono uppercase tracking-[0.3em] text-white/40 flex items-center gap-2">
-                <Trophy size={14} /> Round Analytics
-              </h3>
+              <div className="flex items-center gap-3">
+                <Trophy size={20} className="text-vox-black" />
+                <h3 className="font-black uppercase tracking-tighter text-xl text-vox-black">{t.standings}</h3>
+              </div>
             </div>
             
-            <div className="space-y-3 overflow-y-auto custom-scrollbar pr-2 flex-grow">
+            <div className="space-y-4 flex-grow">
               {playersList.map((p, index) => {
                 const guessData = guesses[p.id];
                 const isCorrect = guessData?.correct;
+                const gain = p.score - p.prevScore;
                 
                 return (
                   <motion.div 
@@ -152,40 +191,46 @@ export function RoundEnd() {
                     initial={{ x: 20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.3 + (index * 0.05) }}
-                    className={`flex flex-col p-4 rounded-2xl border transition-all ${isCorrect ? 'bg-[#1DB954]/5 border-[#1DB954]/20' : 'bg-white/[0.02] border-white/5'}`}
+                    className={`p-4 border-2 border-vox-black transition-all ${isCorrect ? 'bg-vox-yellow/20' : 'bg-vox-paper/50'}`}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-1.5 h-1.5 rounded-full ${isCorrect ? 'bg-[#1DB954]' : 'bg-white/10'}`} />
-                        <span className="font-bold text-sm text-white/80">{p.name}</span>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 border-2 border-vox-black flex items-center justify-center font-black text-lg ${isCorrect ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}>
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-black text-lg leading-none text-vox-black">{p.name}</p>
+                          {p.streak >= 3 && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <Flame size={12} className="text-vox-red" fill="currentColor" />
+                              <span className="text-[10px] font-black text-vox-red uppercase">{p.streak} {t.streak}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <span className={`font-mono text-sm font-bold ${isCorrect ? 'text-[#1DB954]' : 'text-white/20'}`}>
-                        {p.score} <span className="text-[10px] opacity-50 uppercase ml-1">pts</span>
-                      </span>
+                      <div className="text-right">
+                        <p className="font-black text-2xl leading-none text-vox-black">{p.score}</p>
+                        {gain > 0 && (
+                          <p className="text-[10px] font-black text-vox-red mt-1">+{gain} PTS</p>
+                        )}
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-3 bg-black/40 rounded-xl px-4 py-2.5">
-                      {guessData ? (
-                        <>
-                          {isCorrect ? (
-                            <CheckCircle2 size={14} className="text-[#1DB954] flex-shrink-0" />
-                          ) : (
-                            <XCircle size={14} className="text-red-500/50 flex-shrink-0" />
-                          )}
-                          <span className={`text-xs truncate ${isCorrect ? "text-[#1DB954] font-medium" : "text-white/30 italic"}`}>
-                            "{guessData.guess}"
-                          </span>
-                          {isCorrect && (
-                            <span className="ml-auto text-[10px] font-mono font-bold text-[#1DB954] bg-[#1DB954]/10 px-1.5 py-0.5 rounded">
-                              +{guessData.time === Math.min(...Object.values(guesses).filter(g => g.correct).map(g => g.time)) ? '100' : '50'}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          <XCircle size={14} className="text-white/10 flex-shrink-0" />
-                          <span className="text-xs text-white/10 italic">No Data Received</span>
-                        </>
+                    <div className="bg-vox-white border-2 border-vox-black p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        {isCorrect ? (
+                          <CheckCircle2 size={16} className="text-vox-black flex-shrink-0" />
+                        ) : (
+                          <XCircle size={16} className="text-vox-red flex-shrink-0" />
+                        )}
+                        <span className={`text-sm truncate font-bold text-vox-black ${isCorrect ? "" : "opacity-30 italic"}`}>
+                          {guessData?.guess || t.noGuess}
+                        </span>
+                      </div>
+                      {isCorrect && (
+                        <span className="font-black text-xs ml-4 text-vox-black">
+                          {((guessData.time - lastRoundResult.roundStartTime) / 1000).toFixed(1)}s
+                        </span>
                       )}
                     </div>
                   </motion.div>
@@ -198,4 +243,3 @@ export function RoundEnd() {
     </motion.div>
   );
 }
-

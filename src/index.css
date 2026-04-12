@@ -1,14 +1,106 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@300;400;500;600;700;800&family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Caveat:wght@400;700&family=Kanit:wght@400;700;900&family=Mali:wght@400;700&display=swap');
 @import "tailwindcss";
 
+:root {
+  --vox-yellow: #ffeb00;
+  --vox-black: #000000;
+  --vox-white: #ffffff;
+  --vox-paper: #f4f4f4;
+  --vox-red: #e21d26;
+  --vox-card-bg: #ffffff;
+  --vox-text: #000000;
+  --vox-grid: rgba(0, 0, 0, 0.03);
+}
+
+.dark {
+  --vox-black: #ffffff;
+  --vox-white: #000000;
+  --vox-paper: #121212;
+  --vox-card-bg: #1a1a1a;
+  --vox-text: #ffffff;
+  --vox-grid: rgba(255, 255, 255, 0.03);
+  --vox-red: #ff4d4d;
+}
+
 @theme {
-  --font-sans: "Outfit", "Prompt", "Kanit", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  --font-display: "Anton", sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", serif;
+  --font-hand: "Caveat", cursive;
+  --font-thai: "Kanit", sans-serif;
+  --font-thai-hand: "Mali", cursive;
+
+  --color-vox-yellow: var(--vox-yellow);
+  --color-vox-black: var(--vox-black);
+  --color-vox-white: var(--vox-white);
+  --color-vox-paper: var(--vox-paper);
+  --color-vox-red: var(--vox-red);
+  --color-vox-card-bg: var(--vox-card-bg);
+  --color-vox-text: var(--vox-text);
+
+  --shadow-vox: 4px 4px 0px 0px var(--vox-black);
+  --shadow-vox-lg: 8px 8px 0px 0px var(--vox-black);
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: #0a0502;
-  color: white;
+  background-color: var(--color-vox-paper);
+  color: var(--color-vox-text);
+  overflow-x: hidden;
+  background-image: 
+    linear-gradient(var(--vox-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--vox-grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-vox-paper);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-vox-black);
+  border: 2px solid var(--color-vox-paper);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-vox-yellow);
+}
+
+.vox-card {
+  @apply bg-vox-card-bg border-2 border-vox-black shadow-vox p-6 transition-colors;
+}
+
+.vox-button {
+  @apply bg-vox-yellow border-2 border-vox-black shadow-vox px-6 py-3 font-bold uppercase tracking-tighter transition-all text-black;
+}
+
+.vox-button:hover {
+  @apply translate-x-[2px] translate-y-[2px] shadow-none;
+}
+
+.vox-button:active {
+  @apply translate-x-[4px] translate-y-[4px] shadow-none scale-95;
+}
+
+.vox-title {
+  @apply font-serif italic font-black leading-none tracking-tighter;
+}
+
+.handwritten {
+  @apply font-hand text-vox-red;
+}
+
+.thai-handwritten {
+  @apply font-thai-hand text-vox-red;
+}
+
+.paper-texture {
+  background-image: url("https://www.transparenttextures.com/patterns/paper-fibers.png");
+}
+
+.tape {
+  @apply absolute w-16 h-8 bg-vox-yellow/60 backdrop-blur-sm -rotate-12 pointer-events-none z-10;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }

@@ -5,8 +5,16 @@ interface Player {
   id: string;
   name: string;
   score: number;
+  prevScore: number;
   lastGuess?: string;
   isHost: boolean;
+  streak: number;
+  maxStreak: number;
+  abilities: {
+    hint: number;
+    removeWrong: number;
+    freeze: number;
+  };
 }
 
 interface LikedTrack {
@@ -45,6 +53,8 @@ interface Room {
     cartoonSource?: string;
     landmarkRegion?: string;
     hintsPerGame: number;
+    abilitiesEnabled: boolean;
+    abilitiesPerGame: number;
   };
   tracks: any[];
   currentTrackIndex: number;
@@ -77,6 +87,9 @@ interface GameState {
     hint?: string;
     hintsUsed?: number;
     maxHints?: number;
+    isFrozen?: boolean;
+    freezeEndTime?: number;
+    removedChoices?: string[];
   } | null;
   roundStartTime: number;
   roundEndTime: number;
@@ -95,9 +108,15 @@ interface GameState {
     track: { name: string; artist: string; albumArt: string };
     guesses: Record<string, { guess: string; time: number; correct: boolean }>;
     players: Record<string, Player>;
+    roundStartTime: number;
   } | null;
 
+  // UI State
+  theme: 'light' | 'dark';
+
   actions: {
+    setTheme: (theme: 'light' | 'dark') => void;
+    toggleTheme: () => void;
     setUserToken: (token: string) => void;
     connect: () => void;
     setName: (name: string) => void;
@@ -107,7 +126,7 @@ interface GameState {
     startGame: (playlistId: string, trackIds?: string[], customTracks?: Track[]) => void;
     resetToLobby: () => void;
     submitGuess: (guess: string) => void;
-    getHint: () => void;
+    useAbility: (ability: 'hint' | 'removeWrong' | 'freeze') => void;
     leaveRoom: () => void;
     clearError: () => void;
     trackPlaying: () => void;
@@ -115,6 +134,15 @@ interface GameState {
     unlikeTrack: (trackId: string) => void;
   };
 }
+
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
 
 export const useGameStore = create<GameState>((set, get) => ({
   socket: null,
@@ -141,7 +169,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   intermissionDuration: null,
   lastRoundResult: null,
 
+  theme: 'light',
+
   actions: {
+    setTheme: (theme) => set({ theme }),
+    toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
     setUserToken: (token: string) => set({ userToken: token }),
     connect: () => {
       const socket = io();
@@ -188,6 +220,40 @@ export const useGameStore = create<GameState>((set, get) => ({
             maxHints: data.maxHints
           } : null
         }));
+      });
+
+      socket.on('ability_effect', (data) => {
+        if (data.type === 'FREEZE') {
+          set((state) => ({
+            currentTrack: state.currentTrack ? { 
+              ...state.currentTrack, 
+              isFrozen: true,
+              freezeEndTime: Date.now() + data.duration
+            } : null
+          }));
+          setTimeout(() => {
+            set((state) => ({
+              currentTrack: state.currentTrack ? { ...state.currentTrack, isFrozen: false, freezeEndTime: undefined } : null
+            }));
+          }, data.duration);
+        } else if (data.type === 'REMOVE_WRONG') {
+          const { currentTrack, room } = get();
+          if (!currentTrack || !currentTrack.choices || !room) return;
+          
+          const correctChoice = room.roundGuessTarget === 'SONG' ? room.tracks[room.currentTrackIndex].name :
+                                room.roundGuessTarget === 'ARTIST' ? room.tracks[room.currentTrackIndex].artist :
+                                `${room.tracks[room.currentTrackIndex].name} - ${room.tracks[room.currentTrackIndex].artist}`;
+          
+          const wrongChoices = currentTrack.choices.filter(c => c !== correctChoice);
+          const toRemove = shuffleArray(wrongChoices).slice(0, data.count);
+          
+          set((state) => ({
+            currentTrack: state.currentTrack ? { 
+              ...state.currentTrack, 
+              removedChoices: [...(state.currentTrack.removedChoices || []), ...toRemove] 
+            } : null
+          }));
+        }
       });
 
       socket.on('countdown_start', (count) => {
@@ -269,10 +335,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     },
     
-    getHint: () => {
+    useAbility: (ability) => {
       const { socket, roomId } = get();
       if (socket && roomId) {
-        socket.emit('get_hint', { roomId });
+        socket.emit('use_ability', { roomId, ability });
       }
     },
     

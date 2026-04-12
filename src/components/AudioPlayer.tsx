@@ -42,6 +42,12 @@ export function AudioPlayer() {
       }
     }
 
+    // Handle stopping audio when leaving the room
+    if (!room && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+
     // Handle stopping the song after final round
     if (room?.state === 'ROUND_END' && room.currentTrackIndex === room.tracks.length - 1) {
       stopTimeoutRef.current = setTimeout(() => {

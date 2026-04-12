@@ -1,13 +1,27 @@
 import axios from 'axios';
-async function test() {
+
+async function getDeezerPreview(trackName: string, artistName: string) {
   try {
-    const playlistId = 3155776842;
-    const res = await axios.get(`https://api.deezer.com/playlist/${playlistId}`);
-    console.log("Playlist:", res.data.title, res.data.picture_medium);
-    console.log("Tracks:", res.data.tracks.data.length);
-    console.log("First track:", res.data.tracks.data[0].title, res.data.tracks.data[0].artist.name, res.data.tracks.data[0].album.cover_medium);
-  } catch (e) {
-    console.log("Error:", e.message);
+    const query = `track:"${trackName}" artist:"${artistName}"`;
+    const response = await axios.get(`https://api.deezer.com/search?q=${encodeURIComponent(query)}`);
+    if (response.data.data && response.data.data.length > 0) {
+      return {
+        preview: response.data.data[0].preview,
+        albumArt: response.data.data[0].album?.cover_xl || response.data.data[0].album?.cover_medium || ""
+      };
+    }
+    // Fallback to general search if specific search fails
+    const fallbackResponse = await axios.get(`https://api.deezer.com/search?q=${encodeURIComponent(`${trackName} ${artistName}`)}`);
+    if (fallbackResponse.data.data && fallbackResponse.data.data.length > 0) {
+      return {
+        preview: fallbackResponse.data.data[0].preview,
+        albumArt: fallbackResponse.data.data[0].album?.cover_xl || fallbackResponse.data.data[0].album?.cover_medium || ""
+      };
+    }
+  } catch (error: any) {
+    console.error("Deezer error:", error.message);
   }
+  return null;
 }
-test();
+
+getDeezerPreview("ร้าย", "Various Artists").then(res => console.log(res));

@@ -7,30 +7,45 @@ import { RoundEnd } from './components/RoundEnd';
 import { GameEnd } from './components/GameEnd';
 import { Countdown } from './components/Countdown';
 import { AudioPlayer } from './components/AudioPlayer';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Sun, Moon, Languages } from 'lucide-react';
 
 export default function App() {
-  const { room, error, actions } = useGameStore();
+  const { room, error, theme, actions } = useGameStore();
 
   useEffect(() => {
     actions.connect();
   }, []);
 
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
   return (
-    <div className="min-h-screen bg-[#0a0502] text-white font-sans selection:bg-[#1DB954] selection:text-black">
+    <div className="min-h-screen transition-colors duration-300">
       <AudioPlayer />
-      {/* Background Atmosphere */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_30%,_#1a2e1f_0%,_transparent_60%)] opacity-80 blur-[60px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_80%,_#1DB954_0%,_transparent_50%)] opacity-20 blur-[80px]" />
+      
+      {/* Global Header for Toggles */}
+      <div className="fixed top-4 right-4 z-[100] flex items-center gap-2">
+        <button
+          onClick={() => actions.toggleTheme()}
+          className="vox-button px-3 py-2 flex items-center gap-2 bg-vox-white text-vox-black"
+          title="Toggle Theme"
+        >
+          {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+          <span className="text-[10px] font-black uppercase">{theme}</span>
+        </button>
       </div>
 
       {/* Error Toast */}
       {error && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/90 text-white px-4 py-2 rounded-full flex items-center gap-2 shadow-lg backdrop-blur-sm">
-          <AlertCircle size={16} />
-          <span className="text-sm font-medium">{error}</span>
-          <button onClick={actions.clearError} className="ml-2 opacity-70 hover:opacity-100">&times;</button>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[110] bg-vox-red text-white px-6 py-3 border-2 border-vox-black shadow-vox flex items-center gap-3">
+          <AlertCircle size={20} />
+          <span className="font-black text-sm uppercase tracking-widest">{error}</span>
+          <button onClick={actions.clearError} className="ml-4 font-black hover:scale-125 transition-transform">&times;</button>
         </div>
       )}
 
