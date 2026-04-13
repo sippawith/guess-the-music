@@ -33,26 +33,6 @@ export function Game() {
   const CategoryIcon = CATEGORY_ICONS[room?.category || 'MUSIC'] || Music;
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    const updateTimer = () => {
-      if (!isTimerStarted) {
-        setTimeLeft(room?.settings.guessTime || 0);
-        return;
-      }
-      
-      if (currentTrack?.isFrozen) return;
-
-      const now = Date.now();
-      const remaining = Math.max(0, (roundEndTime - now) / 1000);
-      setTimeLeft(remaining);
-    };
-
-    updateTimer();
-    interval = setInterval(updateTimer, 100);
-    return () => clearInterval(interval);
-  }, [roundEndTime, isTimerStarted, room?.settings.guessTime, currentTrack?.isFrozen]);
-
-  useEffect(() => {
     setHasGuessedThisRound(false);
     setLocalGuess(null);
     setGuess('');
@@ -86,9 +66,6 @@ export function Game() {
       setHasGuessedThisRound(true);
     }
   };
-
-  const totalGuessTime = room.settings.guessTime || 15;
-  const progress = (timeLeft / totalGuessTime) * 100;
 
   const getPrompt = () => {
     const target = room.roundGuessTarget || room.settings.guessTarget;
@@ -146,17 +123,12 @@ export function Game() {
             <p className="text-[10px] font-black uppercase tracking-widest opacity-40">{t.yourScore}</p>
             <p className="text-2xl font-black leading-none dark:text-vox-black">{me.score}</p>
           </div>
-          <div className="w-12 h-12 bg-vox-black border-4 border-vox-black shadow-vox flex items-center justify-center relative overflow-hidden">
-             <motion.div 
-               className="absolute bottom-0 left-0 w-full bg-vox-yellow"
-               initial={{ height: "100%" }}
-               animate={{ height: `${progress}%` }}
-               transition={{ duration: 0.1, ease: "linear" }}
-             />
-             <span className={`relative z-10 font-black text-2xl ${progress < 50 ? 'text-vox-white' : 'text-vox-black'}`}>
-               {Math.ceil(timeLeft)}
-             </span>
-          </div>
+          <TimerDisplay 
+            roundEndTime={roundEndTime} 
+            isTimerStarted={isTimerStarted} 
+            guessTime={room.settings.guessTime}
+            isFrozen={currentTrack.isFrozen}
+          />
         </div>
       </div>
 
@@ -367,5 +339,45 @@ function AbilityButton({ icon, label, count, disabled, onClick, description }: a
       </div>
       <span className="text-[10px] font-black uppercase tracking-tighter leading-none text-vox-black mt-1">{label}</span>
     </button>
+  );
+}
+
+function TimerDisplay({ roundEndTime, isTimerStarted, guessTime, isFrozen }: any) {
+  const [timeLeft, setTimeLeft] = useState(guessTime || 15);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const updateTimer = () => {
+      if (!isTimerStarted) {
+        setTimeLeft(guessTime || 15);
+        return;
+      }
+      
+      if (isFrozen) return;
+
+      const now = Date.now();
+      const remaining = Math.max(0, (roundEndTime - now) / 1000);
+      setTimeLeft(remaining);
+    };
+
+    updateTimer();
+    interval = setInterval(updateTimer, 200); // Reduced frequency to 5 times per second
+    return () => clearInterval(interval);
+  }, [roundEndTime, isTimerStarted, guessTime, isFrozen]);
+
+  const progress = (timeLeft / (guessTime || 15)) * 100;
+
+  return (
+    <div className="w-12 h-12 bg-vox-black border-4 border-vox-black shadow-vox flex items-center justify-center relative overflow-hidden">
+      <motion.div 
+        className="absolute bottom-0 left-0 w-full bg-vox-yellow"
+        initial={{ height: "100%" }}
+        animate={{ height: `${progress}%` }}
+        transition={{ duration: 0.2, ease: "linear" }}
+      />
+      <span className={`relative z-10 font-black text-2xl ${progress < 50 ? 'text-vox-white' : 'text-vox-black'}`}>
+        {Math.ceil(timeLeft)}
+      </span>
+    </div>
   );
 }

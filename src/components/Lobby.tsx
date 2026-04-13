@@ -95,7 +95,7 @@ export function Lobby() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-vox-paper/90 backdrop-blur-xl"
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-vox-paper"
           >
             <div className="w-16 h-16 border-4 border-vox-black/10 border-t-vox-black rounded-full animate-spin mb-8" />
             <div className="text-center space-y-2">

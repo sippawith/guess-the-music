@@ -105,6 +105,6 @@ body {
 }
 
 .tape {
-  @apply absolute w-16 h-8 bg-vox-yellow/60 backdrop-blur-sm -rotate-12 pointer-events-none z-10;
+  @apply absolute w-16 h-8 bg-vox-yellow/80 -rotate-12 pointer-events-none z-10;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }

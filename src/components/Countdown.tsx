@@ -20,7 +20,7 @@ export function Countdown() {
   if (countdown === null) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-vox-paper/80 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-vox-paper">
       <AnimatePresence mode="wait">
         <motion.div
           key={countdown}
@@ -38,7 +38,6 @@ export function Countdown() {
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1.2, opacity: 0.2 }}
-            transition={{ duration: 0.8, repeat: Infinity }}
             className="absolute inset-0 border-8 border-vox-yellow -z-10"
           />
         </motion.div>
