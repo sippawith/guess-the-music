@@ -48,7 +48,7 @@ export function GameEnd() {
       </button>
 
       <div className="text-center mb-12 relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-vox-yellow/20 rounded-full blur-3xl -z-10" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-vox-yellow/10 rounded-full -z-10" />
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}

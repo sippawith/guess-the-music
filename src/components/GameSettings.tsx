@@ -53,7 +53,7 @@ export function GameSettings() {
 
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-12">
         <SettingInput 
           label={t.timer}
           icon={Timer}
@@ -80,7 +80,7 @@ export function GameSettings() {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 mb-8 md:mb-12">
         <div className="space-y-4">
           <div className="flex items-center justify-between mb-2">
             <label className="text-[10px] font-black uppercase tracking-widest opacity-40">{t.answerMode}</label>

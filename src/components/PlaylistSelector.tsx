@@ -228,11 +228,11 @@ export function PlaylistSelector() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-vox-yellow/20 border-4 border-vox-black p-8 relative overflow-visible"
+          className="bg-vox-yellow/20 border-4 border-vox-black p-4 md:p-8 relative overflow-visible"
         >
-          <div className="tape -top-4 -right-4 w-24" />
-          <div className="flex flex-col md:flex-row items-center gap-8 mb-8">
-            <div className="w-32 h-32 border-4 border-vox-black shadow-vox flex-shrink-0 overflow-hidden">
+          <div className="tape -top-4 -right-4 w-16 md:w-24" />
+          <div className="flex flex-col md:flex-row items-center gap-6 md:gap-8 mb-8">
+            <div className="w-24 h-24 md:w-32 md:h-32 border-4 border-vox-black shadow-vox flex-shrink-0 overflow-hidden">
               {selectedPlaylist.image ? (
                 <img src={selectedPlaylist.image} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
@@ -241,7 +241,7 @@ export function PlaylistSelector() {
             </div>
             <div className="text-center md:text-left flex-grow">
               <span className="bg-vox-black text-vox-white px-3 py-1 text-[10px] font-black uppercase tracking-widest mb-4 inline-block">{t.activeLibrary}</span>
-              <h4 className="vox-title text-4xl mb-2 text-vox-black line-clamp-2">{selectedPlaylist.name}</h4>
+              <h4 className="vox-title text-2xl md:text-4xl mb-2 text-vox-black line-clamp-2">{selectedPlaylist.name}</h4>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
                 <p className="handwritten text-xl opacity-60 text-vox-black">{playlistTracks.length} {t.tracksDetected}</p>
                 <button 

@@ -846,7 +846,8 @@ io.on("connection", (socket) => {
         player.maxStreak = Math.max(player.streak, player.maxStreak);
         
         const streakMultiplier = 1 + Math.min(player.streak - 1, 10) * 0.1;
-        const roundScore = Math.floor((50 + timeBonus) * streakMultiplier);
+        // Base score increased to 200, making speed less punishing for small differences
+        const roundScore = Math.floor((200 + timeBonus) * streakMultiplier);
         
         player.score += roundScore;
       } else {

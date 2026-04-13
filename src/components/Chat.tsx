@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useGameStore } from '../store';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';

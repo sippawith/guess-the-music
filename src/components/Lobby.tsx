@@ -98,9 +98,9 @@ export function Lobby() {
             className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-vox-paper"
           >
             <div className="w-16 h-16 border-4 border-vox-black/10 border-t-vox-black rounded-full animate-spin mb-8" />
-            <div className="text-center space-y-2">
-              <h2 className="vox-title text-4xl">{t.initializing.split(' ')[0]} <span className="bg-vox-yellow px-2 text-black">{t.initializing.split(' ')[1]}</span></h2>
-              <p className="handwritten text-xl opacity-60 animate-pulse">{gameStatus}</p>
+            <div className="text-center space-y-2 px-4">
+              <h2 className="vox-title text-2xl md:text-4xl">{t.initializing.split(' ')[0]} <span className="bg-vox-yellow px-2 text-black">{t.initializing.split(' ')[1]}</span></h2>
+              <p className="handwritten text-lg md:text-xl opacity-60 animate-pulse">{gameStatus}</p>
             </div>
           </motion.div>
         )}
@@ -228,26 +228,26 @@ export function Lobby() {
             <div className="tape -top-4 -left-4" />
             <div className="tape -bottom-4 -right-4 rotate-12" />
             
-            <div className="relative mb-12">
-              <div className="w-32 h-32 border-8 border-vox-black/10 border-t-vox-black rounded-full animate-spin" />
-              <Disc3 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-vox-black animate-pulse" size={56} />
+            <div className="relative mb-8 md:mb-12">
+              <div className="w-24 h-24 md:w-32 md:h-32 border-8 border-vox-black/10 border-t-vox-black rounded-full animate-spin" />
+              <Disc3 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-vox-black animate-pulse" size={40} />
             </div>
             
-            <h2 className="vox-title text-5xl mb-4 text-vox-black">{t.synchronizing}</h2>
-            <p className="handwritten text-2xl opacity-60 mb-2 text-vox-black">{t.waitingHost}</p>
+            <h2 className="vox-title text-3xl md:text-5xl mb-4 text-vox-black">{t.synchronizing}</h2>
+            <p className="handwritten text-xl md:text-2xl opacity-60 mb-2 text-vox-black">{t.waitingHost}</p>
             
-            <div className="mt-16 w-full max-w-md bg-vox-paper border-4 border-vox-black p-8 shadow-vox text-vox-black">
-              <div className="flex items-center justify-between mb-8 border-b-2 border-vox-black pb-4">
-                <h4 className="font-black uppercase tracking-widest text-sm">{t.sessionMetadata}</h4>
+            <div className="mt-8 md:mt-16 w-full max-w-md bg-vox-paper border-4 border-vox-black p-4 md:p-8 shadow-vox text-vox-black">
+              <div className="flex items-center justify-between mb-4 md:mb-8 border-b-2 border-vox-black pb-4">
+                <h4 className="font-black uppercase tracking-widest text-xs">{t.sessionMetadata}</h4>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-black uppercase tracking-widest opacity-40">{t.guessWindow}</span>
-                  <span className="font-black text-2xl">{room.settings.guessTime}s</span>
+                  <span className="font-black text-xl md:text-2xl">{room.settings.guessTime}s</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-black uppercase tracking-widest opacity-40">{t.rounds}</span>
-                  <span className="font-black text-2xl">{room.settings.numTracks}</span>
+                  <span className="font-black text-xl md:text-2xl">{room.settings.numTracks}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-black uppercase tracking-widest opacity-40">{t.protocol}</span>
@@ -255,7 +255,7 @@ export function Lobby() {
                     key={room.settings.gameMode}
                     initial={{ opacity: 0, x: 5 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="font-black text-xl bg-vox-yellow px-2"
+                    className="font-black text-lg md:text-xl bg-vox-yellow px-2"
                   >
                     {room.settings.gameMode}
                   </motion.span>

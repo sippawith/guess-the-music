@@ -34,7 +34,7 @@ export function Home() {
     >
       {/* Header Section: Magazine Style */}
       <div className="relative mb-20">
-        <div className="absolute -top-10 -left-10 w-32 h-32 bg-vox-yellow/20 rounded-full blur-3xl -z-10" />
+        <div className="absolute -top-10 -left-10 w-32 h-32 bg-vox-yellow/10 rounded-full -z-10" />
         <div className="flex flex-col items-start">
           <motion.span 
             initial={{ x: -20, opacity: 0 }}
@@ -43,7 +43,7 @@ export function Home() {
           >
             {t.subtitle}
           </motion.span>
-          <h1 className="vox-title text-7xl md:text-[10rem] leading-[0.85] mb-4 text-vox-black">
+          <h1 className="vox-title text-5xl md:text-[10rem] leading-[0.85] mb-4 text-vox-black">
             {t.title.split(' ')[0]}<br />
             {t.title.split(' ')[1]}<br />
             <span className="bg-vox-yellow px-4 text-black">{t.title.split(' ')[2]}</span>
@@ -132,11 +132,11 @@ export function Home() {
 
         {/* Right: Info */}
         <div className="lg:col-span-7">
-          <div className="vox-card h-full p-12 flex flex-col items-center justify-center text-center relative overflow-visible">
+          <div className="vox-card h-full p-6 md:p-12 flex flex-col items-center justify-center text-center relative overflow-visible">
             <div className="tape -top-4 -right-4 rotate-12" />
-            <Music size={120} className="text-vox-black/10 mb-8" />
-            <h3 className="vox-title text-4xl mb-4 text-vox-black">{t.selectCategory}</h3>
-            <p className="handwritten text-xl opacity-60 text-vox-black max-w-sm">
+            <Music size={64} className="md:size-[120px] text-vox-black/10 mb-8" />
+            <h3 className="vox-title text-2xl md:text-4xl mb-4 text-vox-black">{t.selectCategory}</h3>
+            <p className="handwritten text-lg md:text-xl opacity-60 text-vox-black max-w-sm">
               Connect your favorite Spotify or Apple Music playlists, or challenge friends with movies, cartoons, and world landmarks.
             </p>
           </div>
@@ -159,7 +159,7 @@ export function Home() {
             >
               <div className="tape -top-6 left-1/2 -translate-x-1/2 w-32" />
               
-              <h2 className="vox-title text-4xl mb-2 italic text-vox-black">{t.selectCategory}</h2>
+              <h2 className="vox-title text-2xl md:text-4xl mb-2 italic text-vox-black">{t.selectCategory}</h2>
               <p className="handwritten text-lg mb-8 text-vox-black opacity-60">
                 Choose your challenge
               </p>
