@@ -229,7 +229,7 @@ export function Game() {
                 </button>
               </form>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <AnimatePresence mode="popLayout">
                   {currentTrack.choices?.map((choice: string, i: number) => {
                     const isRemoved = currentTrack.removedChoices?.includes(choice);
@@ -248,9 +248,9 @@ export function Game() {
                           setLocalGuess(choice);
                           setHasGuessedThisRound(true);
                         }}
-                        className={`vox-button py-2.5 text-xs font-black px-4 bg-vox-white hover:bg-vox-black hover:text-vox-white transition-all ${localGuess === choice ? 'selected' : ''}`}
+                        className={`vox-button py-3 text-sm font-black px-4 bg-vox-white hover:bg-vox-black hover:text-vox-white transition-all whitespace-normal text-center flex items-center justify-center min-h-[60px] ${localGuess === choice ? 'selected' : ''}`}
                       >
-                        <span className="block truncate w-full">{choice}</span>
+                        <span className="block w-full leading-tight">{choice}</span>
                       </motion.button>
                     );
                   })}

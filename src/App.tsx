@@ -39,14 +39,14 @@ export default function App() {
       <AudioPlayer />
       
       {/* Global Header for Toggles */}
-      <div className="fixed top-4 right-4 z-[100] flex items-center gap-2">
+      <div className="fixed bottom-4 left-4 z-[100] flex items-center gap-2">
         <button
           onClick={() => actions.toggleTheme()}
-          className="vox-button px-3 py-2 flex items-center gap-2 bg-vox-white text-vox-black"
+          className="bg-vox-white border-2 border-vox-black p-2 flex items-center gap-2 text-vox-black shadow-vox"
           title="Toggle Theme"
         >
-          {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
-          <span className="text-[10px] font-black uppercase">{theme}</span>
+          {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
+          <span className="text-[8px] font-black uppercase">{theme}</span>
         </button>
       </div>
 
