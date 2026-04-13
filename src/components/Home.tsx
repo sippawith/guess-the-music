@@ -18,6 +18,11 @@ export function Home() {
   const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number]['id']>('MUSIC');
   const [showCreate, setShowCreate] = useState(false);
 
+  const unlockAudio = () => {
+    const silentAudio = new Audio("data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB");
+    silentAudio.play().catch(() => {});
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -84,7 +89,10 @@ export function Home() {
                     maxLength={6}
                   />
                   <button
-                    onClick={() => actions.joinRoom(joinCode)}
+                    onClick={() => {
+                      unlockAudio();
+                      actions.joinRoom(joinCode);
+                    }}
                     disabled={!playerName.trim() || joinCode.length < 6}
                     className="vox-button px-8 py-3"
                   >
@@ -96,7 +104,10 @@ export function Home() {
           </div>
 
           <button
-            onClick={() => setShowCreate(true)}
+            onClick={() => {
+              unlockAudio();
+              setShowCreate(true);
+            }}
             disabled={!playerName.trim()}
             className="w-full vox-button py-8 text-2xl flex items-center justify-center gap-4 group"
           >

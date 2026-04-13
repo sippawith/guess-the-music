@@ -14,6 +14,7 @@ export function Game() {
   const t = translations.en;
   const [guess, setGuess] = useState('');
   const [hasGuessedThisRound, setHasGuessedThisRound] = useState(false);
+  const [localGuess, setLocalGuess] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [showStreak, setShowStreak] = useState(false);
   const [lastStreak, setLastStreak] = useState(0);
@@ -55,6 +56,7 @@ export function Game() {
 
   useEffect(() => {
     setHasGuessedThisRound(false);
+    setLocalGuess(null);
     setGuess('');
   }, [room?.currentTrackIndex]);
 
@@ -73,6 +75,7 @@ export function Game() {
     e?.preventDefault();
     if (guess.trim()) {
       actions.submitGuess(guess.trim());
+      setLocalGuess(guess.trim());
       setGuess("");
       setHasGuessedThisRound(true);
     }
@@ -95,7 +98,7 @@ export function Game() {
   };
 
   return (
-    <div className="w-full max-w-5xl px-4 py-2 flex flex-col h-[calc(100vh-1rem)]">
+    <div className="w-full max-w-5xl px-4 py-2 flex flex-col min-h-screen">
       <AnimatePresence>
         {room.countdown && room.countdown > 0 && (
           <motion.div
@@ -148,10 +151,10 @@ export function Game() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0">
+      <div className="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4 pb-8">
         {/* Left: Clue & Input */}
-        <div className="lg:col-span-8 flex flex-col gap-4 min-h-0">
-          <div className="vox-card flex-grow flex flex-col items-center justify-center p-6 relative overflow-hidden bg-vox-paper">
+        <div className="lg:col-span-8 flex flex-col gap-4">
+          <div className="vox-card flex-grow flex flex-col items-center justify-center p-6 relative overflow-hidden bg-vox-paper min-h-[300px]">
             <div className="tape -top-4 -left-4" />
             <div className="absolute top-4 right-4 opacity-10">
               {room.category === 'MUSIC' ? <Music size={80} /> : <Globe size={80} />}
@@ -199,7 +202,7 @@ export function Game() {
           {/* Input Section */}
           <div className="vox-card p-4 bg-vox-yellow relative overflow-visible">
             <div className="tape -bottom-4 -right-4 rotate-12" />
-            {(me.lastGuess && me.lastGuess !== "" && hasGuessedThisRound) ? (
+            {(hasGuessedThisRound) ? (
               <div className="flex flex-col items-center justify-center py-2">
                 <div className="flex items-center gap-3 text-vox-black mb-1">
                   <CheckCircle2 size={20} />
@@ -241,9 +244,10 @@ export function Game() {
                         transition={{ delay: i * 0.05 }}
                         onClick={() => {
                           actions.submitGuess(choice);
+                          setLocalGuess(choice);
                           setHasGuessedThisRound(true);
                         }}
-                        className={`vox-button py-2.5 text-xs font-black px-4 bg-vox-white hover:bg-vox-black hover:text-vox-white transition-all ${me.lastGuess === choice && hasGuessedThisRound ? 'selected' : ''}`}
+                        className={`vox-button py-2.5 text-xs font-black px-4 bg-vox-white hover:bg-vox-black hover:text-vox-white transition-all ${localGuess === choice ? 'selected' : ''}`}
                       >
                         <span className="line-clamp-1">{choice}</span>
                       </motion.button>
@@ -348,14 +352,20 @@ export function Game() {
 }
 
 function AbilityButton({ icon, label, count, disabled, onClick, description }: any) {
+  const [isPressed, setIsPressed] = useState(false);
+
   return (
     <button
-      onClick={onClick}
+      onClick={(e) => {
+        setIsPressed(true);
+        setTimeout(() => setIsPressed(false), 200);
+        onClick(e);
+      }}
       disabled={disabled}
       className={`group relative flex items-center justify-between p-4 border-2 border-vox-black transition-all ${
         disabled 
           ? 'bg-vox-paper opacity-40 grayscale cursor-not-allowed' 
-          : 'bg-vox-white hover:bg-vox-yellow hover:shadow-vox active:translate-y-1'
+          : `bg-vox-white hover:bg-vox-yellow hover:shadow-vox ${isPressed ? 'translate-x-[4px] translate-y-[4px] shadow-none scale-[0.98] bg-vox-yellow/80' : ''}`
       }`}
     >
       <div className="flex items-center gap-4">

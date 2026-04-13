@@ -174,6 +174,10 @@ export function Lobby() {
   };
 
   const handleStartGame = async () => {
+    // Unlock audio context
+    const silentAudio = new Audio("data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB");
+    silentAudio.play().catch(() => {});
+
     if (room.category === 'MUSIC') {
       if (!selectedPlaylist) return;
       
