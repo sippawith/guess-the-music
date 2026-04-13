@@ -3,11 +3,11 @@ import { Search, Music, Languages } from 'lucide-react';
 import { motion } from 'motion/react';
 import axios from 'axios';
 import { useGameStore } from '../store';
-import { getTranslation } from '../translations';
+import { translations } from '../translations';
 
 export function PlaylistSelector() {
   const { room, actions, userToken, selectedPlaylist, language } = useGameStore();
-  const t = getTranslation(language);
+  const t = translations[language];
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);

@@ -3,7 +3,7 @@ import { useGameStore } from '../store';
 import { Music, Play, Hash, Fingerprint, Film, Tv, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { playSound } from '../utils/sounds';
-import { getTranslation } from '../translations';
+import { translations } from '../translations';
 
 const CATEGORIES = [
   { id: 'MUSIC', name: 'Music', icon: Music, color: '#ffeb00', desc: 'Spotify & Apple Playlists' },
@@ -14,7 +14,7 @@ const CATEGORIES = [
 
 export function Home() {
   const { playerName, language, actions } = useGameStore();
-  const t = getTranslation(language);
+  const t = translations[language];
   const [joinCode, setJoinCode] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number] | null>(null);

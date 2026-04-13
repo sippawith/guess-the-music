@@ -7,7 +7,7 @@ import { RoundEnd } from './components/RoundEnd';
 import { GameEnd } from './components/GameEnd';
 import { Countdown } from './components/Countdown';
 import { AudioPlayer } from './components/AudioPlayer';
-import { AlertCircle, Sun, Moon } from 'lucide-react';
+import { AlertCircle, Sun, Moon, Languages } from 'lucide-react';
 
 export default function App() {
   const { room, error, theme, actions, viewingLobby } = useGameStore();

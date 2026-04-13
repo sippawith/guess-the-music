@@ -41,6 +41,9 @@ A high-energy, social music guessing game where players compete to identify trac
 3. **Configure Environment Variables:**
    Create a `.env` file in the root directory based on `.env.example`:
    ```env
+   # YouTube Data API Key (Optional fallback)
+   YOUTUBE_API_KEY=your_key_here
+
    # Spotify API Credentials (Required for playlist features)
    SPOTIFY_CLIENT_ID=your_id_here
    SPOTIFY_CLIENT_SECRET=your_secret_here
