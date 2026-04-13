@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Timer, Hash, FastForward, Zap } from 'lucide-react';
 import { useGameStore } from '../store';
-import { translations } from '../translations';
+import { getTranslation } from '../translations';
 
 function SettingInput({ label, icon: Icon, value, min, max, onChange }: { 
   label: string, 
@@ -47,7 +47,7 @@ function SettingInput({ label, icon: Icon, value, min, max, onChange }: {
 
 export function GameSettings() {
   const { room, actions, language } = useGameStore();
-  const t = translations[language];
+  const t = getTranslation(language);
 
   if (!room) return null;
 

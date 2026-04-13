@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
 import { playSound, playBackgroundMusic, stopBackgroundMusic } from '../utils/sounds';
-import { translations } from '../translations';
+import { getTranslation } from '../translations';
 import { 
   Send, Sparkles, Lightbulb, CheckCircle2,
   Snowflake, Zap, Flame, ArrowLeft, Scissors,
@@ -18,7 +18,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 
 export function Game() {
   const { room, currentTrack, roundEndTime, isTimerStarted, actions, socket, language } = useGameStore();
-  const t = translations[language];
+  const t = getTranslation(language);
   const [guess, setGuess] = useState('');
   const [hasGuessedThisRound, setHasGuessedThisRound] = useState(false);
   const [localGuess, setLocalGuess] = useState<string | null>(null);
