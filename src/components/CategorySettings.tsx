@@ -1,10 +1,10 @@
 import { useGameStore } from '../store';
-import { translations } from '../translations';
+import { getTranslation } from '../translations';
 import { Play, Globe } from 'lucide-react';
 
 export function CategorySettings() {
   const { room, actions, language } = useGameStore();
-  const t = translations[language];
+  const t = getTranslation(language);
 
   if (!room) return null;
 

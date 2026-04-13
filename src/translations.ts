@@ -94,3 +94,8 @@ export const translations = {
     regionalSelection: "Regional Selection",
   }
 };
+
+
+export function getTranslation(language: 'en' | 'th') {
+  return translations[language] ?? translations.en;
+}
