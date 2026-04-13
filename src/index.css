@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Caveat:wght@400;700&family=Kanit:wght@400;700;900&family=Mali:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Caveat:wght@400;700&family=Sarabun:wght@400;700;800&family=Noto+Sans+Thai:wght@400;700;900&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -23,11 +23,11 @@
 }
 
 @theme {
-  --font-sans: "Inter", "Kanit", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Fraunces", serif;
-  --font-hand: "Caveat", "Mali", cursive;
-  --font-thai: "Kanit", sans-serif;
-  --font-thai-hand: "Mali", cursive;
+  --font-sans: "Inter", "Sarabun", "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", "Sarabun", "Noto Sans Thai", serif;
+  --font-hand: "Caveat", "Sarabun", "Noto Sans Thai", cursive;
+  --font-thai: "Sarabun", "Noto Sans Thai", sans-serif;
+  --font-thai-hand: "Sarabun", "Noto Sans Thai", cursive;
 
   --color-vox-yellow: var(--vox-yellow);
   --color-vox-black: var(--vox-black);

@@ -107,7 +107,7 @@ interface GameState {
   intermissionEndTime: number | null;
   intermissionDuration: number | null;
   lastRoundResult: {
-    track: { name: string; artist: string; albumArt: string };
+    track: { name: string; artist: string; albumArt: string; imageUrl?: string };
     guesses: Record<string, { guess: string; time: number; correct: boolean }>;
     players: Record<string, Player>;
     roundStartTime: number;

@@ -104,8 +104,8 @@ export function RoundEnd() {
                 className="relative flex-shrink-0"
               >
                 <div className="w-48 h-48 md:w-64 md:h-64 border-4 border-vox-black shadow-vox-lg overflow-hidden relative bg-vox-paper">
-                  {track.albumArt ? (
-                    <img src={track.albumArt} alt="Album Art" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  {(track.albumArt || track.imageUrl) ? (
+                    <img src={track.albumArt || track.imageUrl} alt="Album Art" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <Music size={80} className="text-vox-black/10" />

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useGameStore } from '../store';
-import { Music, Play, Terminal, Hash, Fingerprint } from 'lucide-react';
+import { Music, Play, Hash, Fingerprint, Film, Tv, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from '../translations';
 
 const CATEGORIES = [
   { id: 'MUSIC', name: 'Music', icon: Music, color: '#ffeb00', desc: 'Spotify & Apple Playlists' },
+  { id: 'MOVIE', name: 'Movie', icon: Film, color: '#ff6b6b', desc: 'Guess from movie posters' },
+  { id: 'CARTOON', name: 'Cartoon', icon: Tv, color: '#51cf66', desc: 'Name that cartoon!' },
+  { id: 'LANDMARK', name: 'Landmark', icon: MapPin, color: '#339af0', desc: 'World famous places' },
 ] as const;
 
 export function Home() {
@@ -13,6 +16,7 @@ export function Home() {
   const t = translations.en;
   const [joinCode, setJoinCode] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number] | null>(null);
 
   const unlockAudio = () => {
     const silentAudio = new Audio("data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB");
@@ -120,12 +124,13 @@ export function Home() {
             <Music size={120} className="text-vox-black/10 mb-8" />
             <h3 className="vox-title text-4xl mb-4 text-vox-black">{t.selectCategory}</h3>
             <p className="handwritten text-xl opacity-60 text-vox-black max-w-sm">
-              Connect your favorite Spotify or Apple Music playlists and challenge your friends to identify tracks at record speed.
+              Connect your favorite Spotify or Apple Music playlists, or challenge friends with movies, cartoons, and world landmarks.
             </p>
           </div>
         </div>
       </div>
 
+      {/* Category Selection Modal */}
       <AnimatePresence>
         {showCreate && (
           <motion.div
@@ -137,28 +142,61 @@ export function Home() {
             <motion.div
               initial={{ scale: 0.9, rotate: -2 }}
               animate={{ scale: 1, rotate: 0 }}
-              className="vox-card max-w-md w-full text-center relative overflow-visible"
+              className="vox-card max-w-lg w-full text-center relative overflow-visible"
             >
               <div className="tape -top-6 left-1/2 -translate-x-1/2 w-32" />
               
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-vox-yellow border-4 border-vox-black mb-8 rotate-3">
-                <Music size={48} className="text-black" />
-              </div>
-              
-              <h2 className="vox-title text-5xl mb-2 italic text-vox-black">{t.confirmSelection}</h2>
-              <p className="handwritten text-xl mb-12 text-vox-black">
-                {t.readyToStart} Music?
+              <h2 className="vox-title text-4xl mb-2 italic text-vox-black">{t.selectCategory}</h2>
+              <p className="handwritten text-lg mb-8 text-vox-black opacity-60">
+                Choose your challenge
               </p>
+              
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                {CATEGORIES.map(cat => {
+                  const Icon = cat.icon;
+                  const isSelected = selectedCategory?.id === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`vox-button py-6 flex flex-col items-center gap-3 transition-all ${
+                        isSelected 
+                          ? 'selected bg-vox-yellow text-black' 
+                          : 'bg-vox-white text-vox-black'
+                      }`}
+                    >
+                      <div 
+                        className="w-12 h-12 border-2 border-vox-black flex items-center justify-center"
+                        style={{ backgroundColor: isSelected ? cat.color : 'transparent' }}
+                      >
+                        <Icon size={24} />
+                      </div>
+                      <span className="text-sm font-black uppercase tracking-widest">{cat.name}</span>
+                      <span className="text-[10px] opacity-60 font-medium">{cat.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
               
               <div className="flex flex-col gap-4">
                 <button
-                  onClick={() => actions.createRoom('MUSIC')}
-                  className="vox-button py-6 text-xl"
+                  onClick={() => {
+                    if (selectedCategory) {
+                      actions.createRoom(selectedCategory.id as any);
+                      setShowCreate(false);
+                      setSelectedCategory(null);
+                    }
+                  }}
+                  disabled={!selectedCategory}
+                  className="vox-button py-6 text-xl disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   {t.initializeGame}
                 </button>
                 <button
-                  onClick={() => setShowCreate(false)}
+                  onClick={() => {
+                    setShowCreate(false);
+                    setSelectedCategory(null);
+                  }}
                   className="font-black uppercase tracking-widest text-xs hover:text-vox-red transition-colors text-vox-black"
                 >
                   [ {t.cancel} ]

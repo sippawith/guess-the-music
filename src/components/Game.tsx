@@ -3,11 +3,17 @@ import { useGameStore } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from '../translations';
 import { 
-  Disc3, Send, Clock, Trophy, Check, Sparkles, 
-  Lightbulb, RefreshCw, AlertCircle, ArrowLeft,
-  Snowflake, Zap, Flame, Users, Music2, Timer,
-  Music, Globe, CheckCircle2, Scissors
+  Send, Sparkles, Lightbulb, CheckCircle2,
+  Snowflake, Zap, Flame, ArrowLeft, Scissors,
+  Music, Film, Tv, MapPin
 } from 'lucide-react';
+
+const CATEGORY_ICONS: Record<string, any> = {
+  'MUSIC': Music,
+  'MOVIE': Film,
+  'CARTOON': Tv,
+  'LANDMARK': MapPin,
+};
 
 export function Game() {
   const { room, currentTrack, roundEndTime, isTimerStarted, actions, socket } = useGameStore();
@@ -18,11 +24,14 @@ export function Game() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [showStreak, setShowStreak] = useState(false);
   const [lastStreak, setLastStreak] = useState(0);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const me = room?.players[socket?.id || ''];
   const currentRound = (room?.currentTrackIndex || 0) + 1;
   const totalRounds = room?.tracks.length || 10;
+  const isVisualCategory = room?.category !== 'MUSIC';
+  const CategoryIcon = CATEGORY_ICONS[room?.category || 'MUSIC'] || Music;
 
   useEffect(() => {
     if (room?.countdown && room.countdown > 0) {
@@ -58,6 +67,7 @@ export function Game() {
     setHasGuessedThisRound(false);
     setLocalGuess(null);
     setGuess('');
+    setImageLoaded(false);
   }, [room?.currentTrackIndex]);
 
   useEffect(() => {
@@ -68,6 +78,13 @@ export function Game() {
       return () => clearTimeout(timer);
     }
   }, [me?.streak, lastStreak]);
+
+  // For visual categories, signal "track_playing" when image loads
+  useEffect(() => {
+    if (isVisualCategory && imageLoaded) {
+      actions.trackPlaying();
+    }
+  }, [isVisualCategory, imageLoaded]);
 
   if (!room || !currentTrack || !me) return null;
 
@@ -182,7 +199,7 @@ export function Game() {
           <div className="vox-card flex-grow flex flex-col items-center justify-center p-6 relative overflow-hidden bg-vox-paper min-h-[300px]">
             <div className="tape -top-4 -left-4" />
             <div className="absolute top-4 right-4 opacity-10">
-              {room.category === 'MUSIC' ? <Music size={80} /> : <Globe size={80} />}
+              <CategoryIcon size={80} />
             </div>
             
             <AnimatePresence mode="wait">
@@ -193,14 +210,23 @@ export function Game() {
                 exit={{ y: -20, opacity: 0 }}
                 className="text-center relative z-10 w-full"
               >
-                <span className="handwritten text-lg mb-2 block opacity-60 dark:text-vox-black">{t.analyzingSignal}</span>
+                <span className="handwritten text-lg mb-2 block opacity-60 dark:text-vox-black">
+                  {isVisualCategory ? t.analyzingVisual : t.analyzingSignal}
+                </span>
                 <h3 className="vox-title text-3xl md:text-5xl mb-4 leading-tight px-4 text-vox-black line-clamp-3">
                   {getPrompt()}
                 </h3>
                 
-                {currentTrack.imageUrl && room.category !== 'MUSIC' && (
+                {/* Image display for visual categories */}
+                {isVisualCategory && currentTrack.imageUrl && (
                   <div className="w-full max-w-sm mx-auto mb-4 border-4 border-vox-black shadow-vox overflow-hidden bg-vox-white">
-                    <img src={currentTrack.imageUrl} alt="Clue" className="w-full h-40 object-cover" />
+                    <img 
+                      src={currentTrack.imageUrl} 
+                      alt="Clue" 
+                      className="w-full h-64 object-cover"
+                      onLoad={() => setImageLoaded(true)}
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
                 )}
 
@@ -215,11 +241,14 @@ export function Game() {
                   </motion.div>
                 )}
 
-                <div className="flex justify-center gap-2">
-                  <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce [animation-delay:0.4s]" />
-                </div>
+                {/* Only show bouncing dots for music (audio loading indicator) */}
+                {!isVisualCategory && (
+                  <div className="flex justify-center gap-2">
+                    <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce [animation-delay:0.4s]" />
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
