@@ -152,6 +152,7 @@ interface GameState {
     setError: (error: string) => void;
     clearError: () => void;
     trackPlaying: () => void;
+    trackReady: () => void;
     likeTrack: (track: LikedTrack) => void;
     unlikeTrack: (trackId: string) => void;
     sendChatMessage: (message: string) => void;
@@ -403,6 +404,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       const { socket, roomId } = get();
       if (socket && roomId) {
         socket.emit('track_playing', { roomId });
+      }
+    },
+    trackReady: () => {
+      const { socket, roomId } = get();
+      if (socket && roomId) {
+        socket.emit('track_ready', { roomId });
       }
     },
     likeTrack: (track: LikedTrack) => set((state) => ({

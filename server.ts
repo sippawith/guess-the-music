@@ -379,10 +379,6 @@ io.on("connection", (socket) => {
   socket.on("start_game", async ({ roomId, playlistId, userToken, trackIds, customTracks }) => {
     const room = rooms[roomId];
     if (!room || !room.players[socket.id]?.isHost) return;
-    if (room.state === "PLAYING") return; // Prevent concurrent starts
-    
-    room.state = "PLAYING"; // Set immediately to block further clicks
-    io.to(roomId).emit("room_update", getPublicRoom(room));
 
     try {
       io.to(roomId).emit("game_status", "Initializing Sequence...");
@@ -550,13 +546,32 @@ io.on("connection", (socket) => {
       room.currentTrackIndex = 0;
       room.hintsUsed = 0;
       
-      startRound(roomId);
+      // Start countdown
+      room.state = "PLAYING";
+      room.countdown = 3;
+      
+      const countdownInterval = setInterval(() => {
+        if (!rooms[roomId]) {
+          clearInterval(countdownInterval);
+          return;
+        }
+        
+        rooms[roomId].countdown!--;
+        io.to(roomId).emit("countdown_tick", rooms[roomId].countdown);
+        
+        if (rooms[roomId].countdown === 0) {
+          clearInterval(countdownInterval);
+          delete rooms[roomId].countdown;
+          startRound(roomId);
+        }
+      }, 1000);
+      
+      io.to(roomId).emit("countdown_start", 3);
+      io.to(roomId).emit("room_update", getPublicRoom(room));
     } catch (error: any) {
-      room.state = "LOBBY";
       console.error("Game Start Error:", error.response?.data || error.message);
       let errorMsg = error.response?.data?.error?.message || error.message;
       io.to(roomId).emit("error", "Failed to start game: " + errorMsg);
-      io.to(roomId).emit("room_update", getPublicRoom(room));
     }
   });
 
@@ -647,39 +662,8 @@ io.on("connection", (socket) => {
     // Fallback timer start (in case players don't signal buffered)
     if (room.roundTimeout) clearTimeout(room.roundTimeout);
     room.roundTimeout = setTimeout(() => {
-      startCountdown(roomId);
-    }, room.category === 'MUSIC' ? 10000 : 5000);
-  }
-
-  function startCountdown(roomId: string) {
-    const room = rooms[roomId];
-    if (!room || room.state !== "PLAYING" || room.roundEndTime !== 0 || room.countdown !== undefined) return;
-
-    if (room.roundTimeout) clearTimeout(room.roundTimeout);
-    
-    room.countdown = 3;
-    io.to(roomId).emit("countdown_start", 3);
-    
-    const countdownInterval = setInterval(() => {
-      if (!rooms[roomId] || rooms[roomId].state !== "PLAYING") {
-        clearInterval(countdownInterval);
-        return;
-      }
-      
-      rooms[roomId].countdown!--;
-      io.to(roomId).emit("countdown_tick", rooms[roomId].countdown);
-      
-      if (rooms[roomId].countdown === 0) {
-        clearInterval(countdownInterval);
-        delete rooms[roomId].countdown;
-        startTimer(roomId);
-        setTimeout(() => {
-          if (rooms[roomId] && rooms[roomId].state === "PLAYING") {
-            io.to(roomId).emit("countdown_tick", null);
-          }
-        }, 1000);
-      }
-    }, 1000);
+      startTimer(roomId);
+    }, 10000); // Increased fallback to 10 seconds to allow slow mobile devices to buffer
   }
 
   function startTimer(roomId: string) {
@@ -696,15 +680,19 @@ io.on("connection", (socket) => {
     }, room.settings.guessTime * 1000);
   }
 
-  socket.on("track_playing", ({ roomId }) => {
+  socket.on("track_ready", ({ roomId }) => {
     const room = rooms[roomId];
     if (!room || room.state !== "PLAYING" || room.roundEndTime !== 0) return;
 
     room.bufferedPlayers.add(socket.id);
     const numPlayers = Object.keys(room.players).length;
     if (room.bufferedPlayers.size >= numPlayers) {
-      startCountdown(roomId);
+      startTimer(roomId);
     }
+  });
+
+  socket.on("track_playing", ({ roomId }) => {
+    // Kept for backwards compatibility if needed, but track_ready is now the main synchronization point
   });
 
   socket.on("submit_guess", ({ roomId, guess }) => {

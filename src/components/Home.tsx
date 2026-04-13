@@ -19,8 +19,11 @@ export function Home() {
   const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number] | null>(null);
 
   const unlockAudio = () => {
-    const silentAudio = new Audio("data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB");
-    silentAudio.play().catch(() => {});
+    const audioEl = document.getElementById('main-audio') as HTMLAudioElement;
+    if (audioEl) {
+      audioEl.src = "data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB";
+      audioEl.play().catch(() => {});
+    }
   };
 
   return (

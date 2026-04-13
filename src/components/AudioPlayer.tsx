@@ -3,76 +3,54 @@ import { useGameStore } from '../store';
 import { Volume2 } from 'lucide-react';
 
 export function AudioPlayer() {
-  const { currentTrack, room, isTimerStarted, actions } = useGameStore();
+  const { currentTrack, room, actions, isTimerStarted } = useGameStore();
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
 
-  // Handle loading and signaling readiness
+  // 1. Handle loading the audio source and notifying readiness
   useEffect(() => {
-    let fallbackTimeout: NodeJS.Timeout;
-    
     if (currentTrack && audioRef.current) {
+      // Clear any pending stop timeout
       if (stopTimeoutRef.current) {
         clearTimeout(stopTimeoutRef.current);
         stopTimeoutRef.current = null;
       }
 
-      const currentSrc = audioRef.current.src;
-      const newSrc = currentTrack.previewUrl;
+      if (currentTrack.previewUrl) {
+        if (audioRef.current.src !== currentTrack.previewUrl) {
+          audioRef.current.src = currentTrack.previewUrl;
+          audioRef.current.volume = 0.5;
+          audioRef.current.loop = false;
+          audioRef.current.load();
 
-      if (newSrc && !currentSrc.endsWith(newSrc)) {
-        audioRef.current.src = newSrc;
-        audioRef.current.volume = 0.5;
-        audioRef.current.loop = false;
-        
-        // Signal ready when enough audio is buffered
-        audioRef.current.oncanplaythrough = () => {
-          actions.trackPlaying();
-        };
-        
-        // Fallback in case oncanplaythrough doesn't fire
-        fallbackTimeout = setTimeout(() => {
-          actions.trackPlaying();
-        }, 8000);
-      } else if (newSrc && currentSrc.endsWith(newSrc)) {
-        // Already loaded, signal immediately
-        actions.trackPlaying();
-      } else if (!newSrc) {
+          audioRef.current.oncanplaythrough = () => {
+            actions.trackReady();
+            if (audioRef.current) audioRef.current.oncanplaythrough = null;
+          };
+
+          // Fallback if canplaythrough doesn't fire
+          setTimeout(() => {
+            if (audioRef.current?.oncanplaythrough) {
+              actions.trackReady();
+              audioRef.current.oncanplaythrough = null;
+            }
+          }, 8000);
+        }
+      } else {
+        // Non-music category background music
         const bgMusicUrl = "https://archive.org/download/KahootLobbyMusic/Kahoot%20Lobby%20Music%20%28HD%29.mp3";
         if (!audioRef.current.src.includes("Kahoot")) {
           audioRef.current.src = bgMusicUrl;
           audioRef.current.volume = 0.3;
           audioRef.current.loop = true;
+          audioRef.current.load();
         }
-        // For non-music, Game.tsx handles signaling when image loads
+        // We don't call trackReady here; Game.tsx handles it when the image loads.
       }
     }
-    
-    return () => {
-      if (fallbackTimeout) clearTimeout(fallbackTimeout);
-    };
-  }, [currentTrack, actions]);
 
-  // Handle actual playback when timer starts
-  useEffect(() => {
-    if (isTimerStarted && audioRef.current && currentTrack) {
-      audioRef.current.play().then(() => {
-        setIsBlocked(false);
-      }).catch(e => {
-        console.error("Audio play failed:", e);
-        setIsBlocked(true);
-      });
-    } else if (!isTimerStarted && room?.state === 'PLAYING') {
-      // Pause audio during countdown or before timer starts
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    }
-  }, [isTimerStarted, currentTrack, room?.state]);
-
-  // Handle stopping audio
-  useEffect(() => {
+    // Handle stopping audio when leaving the room or returning to lobby
     if ((!room || room.state === 'LOBBY') && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
@@ -96,7 +74,19 @@ export function AudioPlayer() {
     return () => {
       if (stopTimeoutRef.current) clearTimeout(stopTimeoutRef.current);
     };
-  }, [currentTrack, room?.state, room?.currentTrackIndex, room?.tracks.length, actions]);
+  }, [currentTrack, room?.state, room?.currentTrackIndex, room?.tracks?.length, actions]);
+
+  // 2. Handle actually playing the audio when the timer starts
+  useEffect(() => {
+    if (isTimerStarted && audioRef.current && currentTrack) {
+      audioRef.current.play().then(() => {
+        setIsBlocked(false);
+      }).catch(e => {
+        console.error("Audio play failed:", e);
+        setIsBlocked(true);
+      });
+    }
+  }, [isTimerStarted, currentTrack]);
 
   const handleUnblock = () => {
     if (audioRef.current) {
@@ -108,7 +98,7 @@ export function AudioPlayer() {
 
   return (
     <>
-      <audio ref={audioRef} />
+      <audio id="main-audio" ref={audioRef} playsInline />
       {isBlocked && (
         <button
           onClick={handleUnblock}

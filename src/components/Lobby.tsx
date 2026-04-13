@@ -29,8 +29,11 @@ export function Lobby() {
 
   const handleStartGame = async () => {
     // Unlock audio context
-    const silentAudio = new Audio("data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB");
-    silentAudio.play().catch(() => {});
+    const audioEl = document.getElementById('main-audio') as HTMLAudioElement;
+    if (audioEl) {
+      audioEl.src = "data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB";
+      audioEl.play().catch(() => {});
+    }
 
     if (isNonMusicCategory) {
       // Non-music categories don't need a playlist
