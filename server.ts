@@ -264,7 +264,7 @@ async function scrapeAppleMusicPlaylist(playlistUrl: string) {
 // ===========================================================================
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
-const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w780';
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 
 const MOVIE_GENRE_IDS: Record<string, string> = {
   'Action/Drama': '28,18',
@@ -307,7 +307,7 @@ async function fetchTMDBDiscover(type: 'movie' | 'tv', params: Record<string, st
         language: 'en-US'
       });
       if (!params.sort_by) queryParams.set('sort_by', 'popularity.desc');
-      if (!params['vote_count.gte']) queryParams.set('vote_count.gte', '1000'); // Ensure highly popular/famous titles
+      if (!params['vote_count.gte']) queryParams.set('vote_count.gte', '50');
       
       const res = await axios.get(`${TMDB_BASE_URL}/discover/${type}?${queryParams}`, { headers });
       allResults = allResults.concat(res.data.results || []);
@@ -329,13 +329,9 @@ async function searchTMDB(query: string, type: 'movie' | 'tv'): Promise<any | nu
       headers
     });
     
-    // We only want extremely popular/famous shows even from search, and require a backdrop
     const results = res.data.results;
-    if (results && results.length > 0) {
-      const bestMatch = results.find((r: any) => r.backdrop_path && r.vote_count > 50) || results[0];
-      if (bestMatch && (bestMatch.backdrop_path || bestMatch.poster_path)) {
-        return bestMatch;
-      }
+    if (results && results.length > 0 && results[0].poster_path) {
+      return results[0];
     }
   } catch (error: any) {
     console.error(`TMDB search error for "${query}":`, error.response?.data || error.message);
@@ -344,8 +340,6 @@ async function searchTMDB(query: string, type: 'movie' | 'tv'): Promise<any | nu
 }
 
 function tmdbToTrack(item: any, type: 'movie' | 'tv'): Track {
-  // Use backdrop_path to avoid movie titles written in posters. Fallback to poster_path if none exists.
-  const imagePath = item.backdrop_path || item.poster_path;
   return {
     id: `tmdb-${item.id}`,
     name: type === 'movie' ? item.title : item.name,
@@ -354,7 +348,7 @@ function tmdbToTrack(item: any, type: 'movie' | 'tv'): Track {
       : (item.first_air_date?.split('-')[0] || 'Unknown Year'),
     previewUrl: '',
     albumArt: '',
-    imageUrl: imagePath ? `${TMDB_IMAGE_BASE}${imagePath}` : ''
+    imageUrl: item.poster_path ? `${TMDB_IMAGE_BASE}${item.poster_path}` : ''
   };
 }
 
@@ -364,7 +358,6 @@ async function fetchMoviesFromTMDB(genre: string): Promise<Track[]> {
   
   if (genre === 'Thai Movies') {
     params.with_original_language = 'th';
-    params['vote_count.gte'] = '50'; // Thai movies have lower global vote counts
   } else if (genre === 'Classic') {
     params['primary_release_date.lte'] = '2000-12-31';
     params.sort_by = 'vote_count.desc';
@@ -374,7 +367,7 @@ async function fetchMoviesFromTMDB(genre: string): Promise<Track[]> {
   }
   
   const results = await fetchTMDBDiscover('movie', params);
-  const tracks = results.filter(m => m.backdrop_path || m.poster_path).map(m => tmdbToTrack(m, 'movie'));
+  const tracks = results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
   console.log(`[TMDB] Found ${tracks.length} movies for genre: ${genre}`);
   return tracks;
 }
@@ -385,36 +378,33 @@ async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
   if (source === 'Disney/Pixar') {
     const results = await fetchTMDBDiscover('movie', {
       with_genres: '16',
-      with_companies: '2|3',
-      'vote_count.gte': '1000'
+      with_companies: '2|3'
     });
-    return results.filter(m => m.backdrop_path || m.poster_path).map(m => tmdbToTrack(m, 'movie'));
+    return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
   }
   
   if (source === 'Anime') {
-    const results = await fetchTMDBDiscover('tv', {
+    const results = await fetchTMDBDiscover('movie', {
       with_genres: '16',
-      with_original_language: 'ja',
-      'vote_count.gte': '500' // Anime series might have slightly fewer global votes than Disney movies
+      with_original_language: 'ja'
     });
-    return results.filter(m => m.backdrop_path || m.poster_path).map(m => tmdbToTrack(m, 'tv'));
+    return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
   }
   
   if (source === 'Classic 90s') {
-    const results = await fetchTMDBDiscover('tv', {
+    const results = await fetchTMDBDiscover('movie', {
       with_genres: '16',
-      'first_air_date.gte': '1985-01-01',
-      'first_air_date.lte': '2002-12-31',
-      'vote_count.gte': '100'
+      'primary_release_date.gte': '1985-01-01',
+      'primary_release_date.lte': '2002-12-31'
     });
-    return results.filter(m => m.backdrop_path || m.poster_path).map(m => tmdbToTrack(m, 'tv'));
+    return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
   }
   
-  // Cartoon Network or Nickelodeon — search for specific famous shows
+  // Cartoon Network or Nickelodeon — search for specific shows
   const showNames = source === 'Cartoon Network' ? CARTOON_NETWORK_SHOWS : NICKELODEON_SHOWS;
   const searchResults = await Promise.all(showNames.map(name => searchTMDB(name, 'tv')));
   const tracks = searchResults
-    .filter((r): r is NonNullable<typeof r> => r !== null && (r.backdrop_path || r.poster_path))
+    .filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path)
     .map(r => tmdbToTrack(r, 'tv'));
   console.log(`[TMDB] Found ${tracks.length} cartoons for source: ${source}`);
   return tracks;
