@@ -105,9 +105,9 @@ export function Game() {
       className="w-full max-w-5xl px-4 py-2 flex flex-col min-h-screen relative"
     >
       <button 
-        onClick={() => actions.leaveRoom()}
+        onClick={() => actions.setViewingLobby(true)}
         className="fixed top-6 left-6 p-3 rounded-2xl bg-vox-white border-2 border-vox-black shadow-vox text-vox-black hover:bg-vox-yellow transition-all z-50"
-        title="Leave Game"
+        title="Room Status"
       >
         <ArrowLeft size={20} />
       </button>
@@ -295,9 +295,9 @@ export function Game() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
+            <div className="flex justify-center gap-4">
               <AbilityButton
-                icon={<Lightbulb size={20} />}
+                icon={<Lightbulb size={24} />}
                 label={t.reveal}
                 count={me.abilities.hint}
                 disabled={me.abilities.hint <= 0 || hasGuessedThisRound || !room.settings.abilitiesEnabled}
@@ -305,7 +305,7 @@ export function Game() {
                 description={t.revealDesc}
               />
               <AbilityButton
-                icon={<Scissors size={20} />}
+                icon={<Scissors size={24} />}
                 label={t.fiftyFifty}
                 count={me.abilities.removeWrong}
                 disabled={me.abilities.removeWrong <= 0 || hasGuessedThisRound || !room.settings.gameMode.startsWith('CHOICE') || !room.settings.abilitiesEnabled}
@@ -313,7 +313,7 @@ export function Game() {
                 description={t.fiftyFiftyDesc}
               />
               <AbilityButton
-                icon={<Snowflake size={20} />}
+                icon={<Snowflake size={24} />}
                 label={t.freeze}
                 count={me.abilities.freeze}
                 disabled={me.abilities.freeze <= 0 || hasGuessedThisRound || currentTrack.isFrozen || !room.settings.abilitiesEnabled}
@@ -342,36 +342,33 @@ export function Game() {
 
 function AbilityButton({ icon, label, count, disabled, onClick, description }: any) {
   const [isPressed, setIsPressed] = useState(false);
+  const [localCooldown, setLocalCooldown] = useState(false);
 
   return (
     <button
       onClick={(e) => {
+        if (disabled || localCooldown) return;
         setIsPressed(true);
+        setLocalCooldown(true);
         setTimeout(() => setIsPressed(false), 200);
+        setTimeout(() => setLocalCooldown(false), 1000);
         onClick(e);
       }}
-      disabled={disabled}
-      className={`group relative flex items-center justify-between p-4 border-2 border-vox-black transition-all ${
-        disabled 
+      disabled={disabled || localCooldown}
+      className={`group relative flex flex-col items-center justify-center p-3 border-2 border-vox-black transition-all w-20 h-20 ${
+        (disabled || localCooldown)
           ? 'bg-vox-paper opacity-40 grayscale cursor-not-allowed' 
-          : `bg-vox-white hover:bg-vox-yellow hover:shadow-vox ${isPressed ? 'translate-x-[4px] translate-y-[4px] shadow-none scale-[0.98] bg-vox-yellow/80' : ''}`
+          : `bg-vox-white hover:bg-vox-yellow hover:shadow-vox ${isPressed ? 'translate-x-[2px] translate-y-[2px] shadow-none scale-[0.95] bg-vox-yellow/80' : ''}`
       }`}
+      title={description}
     >
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <div className={`p-2 border-2 border-vox-black flex-shrink-0 ${disabled ? 'bg-vox-paper' : 'bg-vox-paper group-hover:bg-vox-white'}`}>
-          {icon}
-        </div>
-        <div className="text-left flex-1 min-w-0">
-          <div className="flex items-baseline gap-2">
-            <p className="font-black text-sm uppercase tracking-tighter leading-none text-vox-black truncate">{label}</p>
-          </div>
-          <p className="text-[10px] font-medium opacity-40 leading-none mt-1 text-vox-black truncate">{description}</p>
+      <div className="relative mb-1">
+        {icon}
+        <div className="absolute -top-2 -right-2 bg-vox-black text-vox-white text-[10px] font-black w-4 h-4 flex items-center justify-center rounded-full">
+          {count}
         </div>
       </div>
-      <div className="text-right flex-shrink-0 ml-2">
-        <p className="text-[10px] font-black uppercase tracking-widest opacity-40 text-vox-black">Uses</p>
-        <p className="font-black text-sm text-vox-black">{count}</p>
-      </div>
+      <span className="text-[10px] font-black uppercase tracking-tighter leading-none text-vox-black mt-1">{label}</span>
     </button>
   );
 }

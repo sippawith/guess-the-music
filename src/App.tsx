@@ -10,7 +10,7 @@ import { AudioPlayer } from './components/AudioPlayer';
 import { AlertCircle, Sun, Moon, Languages } from 'lucide-react';
 
 export default function App() {
-  const { room, error, theme, actions } = useGameStore();
+  const { room, error, theme, actions, viewingLobby } = useGameStore();
 
   useEffect(() => {
     actions.connect();
@@ -52,10 +52,10 @@ export default function App() {
       <main className="relative z-10 container mx-auto px-4 py-8 min-h-screen flex flex-col items-center justify-center">
         <Countdown />
         {!room && <Home />}
-        {room?.state === 'LOBBY' && <Lobby />}
-        {room?.state === 'PLAYING' && <Game />}
-        {room?.state === 'ROUND_END' && <RoundEnd />}
-        {room?.state === 'GAME_END' && <GameEnd />}
+        {room && (viewingLobby || room.state === 'LOBBY') && <Lobby />}
+        {room && !viewingLobby && room.state === 'PLAYING' && <Game />}
+        {room && !viewingLobby && room.state === 'ROUND_END' && <RoundEnd />}
+        {room && !viewingLobby && room.state === 'GAME_END' && <GameEnd />}
       </main>
     </div>
   );

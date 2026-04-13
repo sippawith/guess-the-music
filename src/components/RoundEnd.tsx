@@ -39,9 +39,9 @@ export function RoundEnd() {
       className="w-full max-w-7xl px-4 py-4"
     >
       <button 
-        onClick={() => actions.leaveRoom()}
+        onClick={() => actions.setViewingLobby(true)}
         className="fixed top-6 left-6 p-3 rounded-2xl bg-vox-white border-2 border-vox-black shadow-vox text-vox-black hover:bg-vox-yellow transition-all z-50"
-        title="Leave Game"
+        title="Room Status"
       >
         <ArrowLeft size={20} />
       </button>

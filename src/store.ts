@@ -115,12 +115,14 @@ interface GameState {
 
   // UI State
   theme: 'light' | 'dark';
+  viewingLobby: boolean;
 
   actions: {
     setSelectedPlaylist: (playlist: { id: string, name: string, image: string, url?: string } | null) => void;
     setTheme: (theme: 'light' | 'dark') => void;
     toggleTheme: () => void;
     setUserToken: (token: string) => void;
+    setViewingLobby: (viewing: boolean) => void;
     connect: () => void;
     setName: (name: string) => void;
     createRoom: (category: Room['category']) => void;
@@ -173,6 +175,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   intermissionEndTime: null,
   intermissionDuration: null,
   lastRoundResult: null,
+  
+  viewingLobby: false,
 
   theme: 'light',
 
@@ -181,6 +185,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     setTheme: (theme) => set({ theme }),
     toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
     setUserToken: (token: string) => set({ userToken: token }),
+    setViewingLobby: (viewing: boolean) => set({ viewingLobby: viewing }),
     connect: () => {
       const socket = io();
       
@@ -353,7 +358,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (socket && roomId) {
         socket.emit('leave_room', { roomId });
       }
-      set({ roomId: null, room: null, gameStatus: null, currentTrack: null });
+      set({ roomId: null, room: null, gameStatus: null, currentTrack: null, viewingLobby: false });
     },
     
     clearError: () => set({ error: null }),

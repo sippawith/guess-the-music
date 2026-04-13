@@ -331,6 +331,21 @@ export function Lobby() {
 
       {/* Left Column: Room Info & Players (4 cols) */}
       <div className="lg:col-span-4 space-y-8">
+        {room.state !== 'LOBBY' && (
+          <div className="bg-vox-yellow border-4 border-vox-black p-4 flex flex-col gap-4 shadow-vox">
+            <div>
+              <h2 className="font-black text-xl uppercase tracking-widest text-vox-black">Game in Progress</h2>
+              <p className="font-medium text-vox-black opacity-80">Round {room.currentTrackIndex + 1} of {room.tracks.length}</p>
+            </div>
+            <button 
+              onClick={() => actions.setViewingLobby(false)}
+              className="vox-button bg-vox-black text-vox-white px-4 py-2 text-sm w-full"
+            >
+              Return to Game
+            </button>
+          </div>
+        )}
+
         <div className="vox-card relative overflow-visible">
           <div className="tape -top-4 -left-4" />
           
@@ -388,7 +403,7 @@ export function Lobby() {
 
       {/* Right Column: Settings & Selection (8 cols) */}
       <div className="lg:col-span-8 space-y-8">
-        {isHost ? (
+        {isHost && room.state === 'LOBBY' ? (
           <div className="space-y-8">
             <div className="vox-card relative overflow-visible">
               <div className="tape -top-4 -right-4 rotate-12" />
@@ -740,7 +755,7 @@ export function Lobby() {
               </div>
             </button>
           </div>
-        ) : (
+        ) : room.state === 'LOBBY' ? (
           <div className="vox-card h-full flex flex-col items-center justify-center text-center relative overflow-visible p-12">
             <div className="tape -top-4 -left-4" />
             <div className="tape -bottom-4 -right-4 rotate-12" />
@@ -779,6 +794,12 @@ export function Lobby() {
                 </div>
               </div>
             </div>
+          </div>
+        ) : (
+          <div className="vox-card h-full flex flex-col items-center justify-center text-center p-12">
+            <Music size={48} className="text-vox-black/20 mb-4" />
+            <h3 className="vox-title text-3xl mb-2 text-vox-black">Game is Active</h3>
+            <p className="font-medium opacity-60 text-vox-black">You are currently viewing the room status.</p>
           </div>
         )}
       </div>
