@@ -379,6 +379,10 @@ io.on("connection", (socket) => {
   socket.on("start_game", async ({ roomId, playlistId, userToken, trackIds, customTracks }) => {
     const room = rooms[roomId];
     if (!room || !room.players[socket.id]?.isHost) return;
+    if (room.state === "PLAYING") return; // Prevent concurrent starts
+    
+    room.state = "PLAYING"; // Set immediately to block further clicks
+    io.to(roomId).emit("room_update", getPublicRoom(room));
 
     try {
       io.to(roomId).emit("game_status", "Initializing Sequence...");
@@ -548,9 +552,11 @@ io.on("connection", (socket) => {
       
       startRound(roomId);
     } catch (error: any) {
+      room.state = "LOBBY";
       console.error("Game Start Error:", error.response?.data || error.message);
       let errorMsg = error.response?.data?.error?.message || error.message;
       io.to(roomId).emit("error", "Failed to start game: " + errorMsg);
+      io.to(roomId).emit("room_update", getPublicRoom(room));
     }
   });
 
@@ -667,6 +673,11 @@ io.on("connection", (socket) => {
         clearInterval(countdownInterval);
         delete rooms[roomId].countdown;
         startTimer(roomId);
+        setTimeout(() => {
+          if (rooms[roomId] && rooms[roomId].state === "PLAYING") {
+            io.to(roomId).emit("countdown_tick", null);
+          }
+        }, 1000);
       }
     }, 1000);
   }

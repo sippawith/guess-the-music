@@ -10,14 +10,19 @@ export function AudioPlayer() {
 
   // Handle loading and signaling readiness
   useEffect(() => {
+    let fallbackTimeout: NodeJS.Timeout;
+    
     if (currentTrack && audioRef.current) {
       if (stopTimeoutRef.current) {
         clearTimeout(stopTimeoutRef.current);
         stopTimeoutRef.current = null;
       }
 
-      if (currentTrack.previewUrl && audioRef.current.src !== currentTrack.previewUrl) {
-        audioRef.current.src = currentTrack.previewUrl;
+      const currentSrc = audioRef.current.src;
+      const newSrc = currentTrack.previewUrl;
+
+      if (newSrc && !currentSrc.endsWith(newSrc)) {
+        audioRef.current.src = newSrc;
         audioRef.current.volume = 0.5;
         audioRef.current.loop = false;
         
@@ -27,10 +32,13 @@ export function AudioPlayer() {
         };
         
         // Fallback in case oncanplaythrough doesn't fire
-        setTimeout(() => {
+        fallbackTimeout = setTimeout(() => {
           actions.trackPlaying();
         }, 8000);
-      } else if (!currentTrack.previewUrl) {
+      } else if (newSrc && currentSrc.endsWith(newSrc)) {
+        // Already loaded, signal immediately
+        actions.trackPlaying();
+      } else if (!newSrc) {
         const bgMusicUrl = "https://archive.org/download/KahootLobbyMusic/Kahoot%20Lobby%20Music%20%28HD%29.mp3";
         if (!audioRef.current.src.includes("Kahoot")) {
           audioRef.current.src = bgMusicUrl;
@@ -40,6 +48,10 @@ export function AudioPlayer() {
         // For non-music, Game.tsx handles signaling when image loads
       }
     }
+    
+    return () => {
+      if (fallbackTimeout) clearTimeout(fallbackTimeout);
+    };
   }, [currentTrack, actions]);
 
   // Handle actual playback when timer starts
