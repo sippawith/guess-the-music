@@ -735,8 +735,10 @@ io.on("connection", (socket) => {
         room.players[socket.id].lastGuess = guess;
     }
 
-    const correctGuesses = Object.values(room.guessesThisRound).filter(g => g.correct).length;
-    if (correctGuesses === Object.keys(room.players).length) {
+    const totalGuesses = Object.keys(room.guessesThisRound).length;
+    const totalPlayers = Object.keys(room.players).length;
+
+    if (totalGuesses === totalPlayers) {
       if (room.roundTimeout) clearTimeout(room.roundTimeout);
       endRound(roomId);
     }
