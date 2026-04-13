@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../store';
 import { Music, Play, Hash, Fingerprint, Film, Tv, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { playSound } from '../utils/sounds';
 import { translations } from '../translations';
 
 const CATEGORIES = [
@@ -12,8 +13,8 @@ const CATEGORIES = [
 ] as const;
 
 export function Home() {
-  const { playerName, actions } = useGameStore();
-  const t = translations.en;
+  const { playerName, language, actions } = useGameStore();
+  const t = translations[language];
   const [joinCode, setJoinCode] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number] | null>(null);
@@ -29,8 +30,8 @@ export function Home() {
       animate={{ opacity: 1 }}
       className="w-full max-w-5xl px-4 py-12"
     >
-      {/* Header Section: Magazine Style */}
-      <div className="relative mb-20">
+      {/* Header Section */}
+      <div className="flex justify-between items-start mb-20 relative">
         <div className="absolute -top-10 -left-10 w-32 h-32 bg-vox-yellow/20 rounded-full blur-3xl -z-10" />
         <div className="flex flex-col items-start">
           <motion.span 
@@ -50,6 +51,16 @@ export function Home() {
             <p className="font-serif italic text-xl text-vox-black">{t.edition}</p>
           </div>
         </div>
+        <button 
+          onClick={() => {
+            playSound('click');
+            actions.setLanguage(language === 'en' ? 'th' : 'en');
+          }}
+          onMouseEnter={() => playSound('hover')}
+          className="border-2 border-vox-black px-4 py-2 font-black uppercase text-sm bg-vox-white hover:bg-vox-yellow transition-colors"
+        >
+          {language === 'en' ? 'ไทย' : 'ENG'}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -91,9 +102,11 @@ export function Home() {
                   />
                   <button
                     onClick={() => {
+                      playSound('pop');
                       unlockAudio();
                       actions.joinRoom(joinCode);
                     }}
+                    onMouseEnter={() => playSound('hover')}
                     disabled={!playerName.trim() || joinCode.length < 6}
                     className="vox-button px-8 py-3"
                   >
@@ -104,17 +117,21 @@ export function Home() {
             </div>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => {
+              playSound('pop');
               unlockAudio();
               setShowCreate(true);
             }}
+            onMouseEnter={() => playSound('hover')}
             disabled={!playerName.trim()}
             className="w-full vox-button py-8 text-2xl flex items-center justify-center gap-4 group"
           >
             <Play size={28} fill="currentColor" />
             <span>{t.startNew}</span>
-          </button>
+          </motion.button>
         </div>
 
         {/* Right: Info */}
@@ -152,28 +169,38 @@ export function Home() {
               </p>
               
               <div className="grid grid-cols-2 gap-4 mb-8">
-                {CATEGORIES.map(cat => {
+                {CATEGORIES.map((cat, i) => {
                   const Icon = cat.icon;
                   const isSelected = selectedCategory?.id === cat.id;
                   return (
-                    <button
+                    <motion.button
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      whileHover={{ scale: 1.05 }}
                       key={cat.id}
-                      onClick={() => setSelectedCategory(cat)}
+                      onClick={() => {
+                        playSound('click');
+                        setSelectedCategory(cat);
+                      }}
+                      onMouseEnter={() => playSound('hover')}
                       className={`vox-button py-6 flex flex-col items-center gap-3 transition-all ${
                         isSelected 
                           ? 'selected bg-vox-yellow text-black' 
                           : 'bg-vox-white text-vox-black'
                       }`}
                     >
-                      <div 
-                        className="w-12 h-12 border-2 border-vox-black flex items-center justify-center"
+                      <motion.div 
+                        animate={isSelected ? { y: [0, -5, 0] } : {}}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="w-12 h-12 border-2 border-vox-black flex items-center justify-center bg-white"
                         style={{ backgroundColor: isSelected ? cat.color : 'transparent' }}
                       >
                         <Icon size={24} />
-                      </div>
+                      </motion.div>
                       <span className="text-sm font-black uppercase tracking-widest">{cat.name}</span>
                       <span className="text-[10px] opacity-60 font-medium">{cat.desc}</span>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>

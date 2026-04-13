@@ -6,8 +6,8 @@ import { useGameStore } from '../store';
 import { translations } from '../translations';
 
 export function PlaylistSelector() {
-  const { room, actions, userToken, selectedPlaylist } = useGameStore();
-  const t = translations.en;
+  const { room, actions, userToken, selectedPlaylist, language } = useGameStore();
+  const t = translations[language];
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);

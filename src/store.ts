@@ -115,12 +115,14 @@ interface GameState {
 
   // UI State
   theme: 'light' | 'dark';
+  language: 'en' | 'th';
   viewingLobby: boolean;
 
   actions: {
     setSelectedPlaylist: (playlist: { id: string, name: string, image: string, url?: string } | null) => void;
     setTheme: (theme: 'light' | 'dark') => void;
     toggleTheme: () => void;
+    setLanguage: (lang: 'en' | 'th') => void;
     setUserToken: (token: string) => void;
     setViewingLobby: (viewing: boolean) => void;
     connect: () => void;
@@ -179,11 +181,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   viewingLobby: false,
 
   theme: 'light',
+  language: 'en',
 
   actions: {
     setSelectedPlaylist: (playlist) => set({ selectedPlaylist: playlist }),
     setTheme: (theme) => set({ theme }),
     toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+    setLanguage: (lang) => set({ language: lang }),
     setUserToken: (token: string) => set({ userToken: token }),
     setViewingLobby: (viewing: boolean) => set({ viewingLobby: viewing }),
     connect: () => {

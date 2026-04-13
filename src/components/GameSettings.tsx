@@ -46,8 +46,8 @@ function SettingInput({ label, icon: Icon, value, min, max, onChange }: {
 }
 
 export function GameSettings() {
-  const { room, actions } = useGameStore();
-  const t = translations.en;
+  const { room, actions, language } = useGameStore();
+  const t = translations[language];
 
   if (!room) return null;
 

@@ -9,10 +9,11 @@ import { translations } from '../translations';
 import { GameSettings } from './GameSettings';
 import { PlaylistSelector } from './PlaylistSelector';
 import { CategorySettings } from './CategorySettings';
+import { playSound } from '../utils/sounds';
 
 export function Lobby() {
-  const { room, socket, actions, gameStatus, selectedPlaylist } = useGameStore();
-  const t = translations.en;
+  const { room, socket, actions, gameStatus, selectedPlaylist, language } = useGameStore();
+  const t = translations[language];
   const [copied, setCopied] = useState(false);
 
   if (!room || !socket) return null;
@@ -23,6 +24,7 @@ export function Lobby() {
 
   const copyCode = () => {
     navigator.clipboard.writeText(room.id);
+    playSound('pop');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -175,18 +177,26 @@ export function Lobby() {
             </div>
 
             {/* Start Button */}
-            <button
-              onClick={handleStartGame}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                playSound('click');
+                handleStartGame();
+              }}
+              onMouseEnter={() => playSound('hover')}
               disabled={!canStart}
-              className="w-full vox-button py-8 text-2xl flex items-center justify-center gap-6 bg-vox-black text-vox-white hover:bg-vox-yellow hover:text-vox-black transition-all shadow-vox-lg disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-full vox-button py-8 text-2xl flex items-center justify-center gap-6 bg-vox-black text-vox-white mt-8 group disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              <Play size={32} fill="currentColor" />
+              <div className="w-12 h-12 bg-vox-yellow flex items-center justify-center border-2 border-vox-black rotate-3 group-hover:rotate-12 transition-transform">
+                <Play size={32} className="text-black" fill="currentColor" />
+              </div>
               <div className="flex flex-col items-start">
-                <span className="font-black uppercase tracking-[0.2em] leading-none">
+                <span className="font-black uppercase tracking-[0.2em] leading-none text-white">
                   {t.startSession}
                 </span>
               </div>
-            </button>
+            </motion.button>
           </div>
         ) : room.state === 'LOBBY' ? (
           /* Non-host waiting view */
