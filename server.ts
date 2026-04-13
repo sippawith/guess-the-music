@@ -260,102 +260,164 @@ async function scrapeAppleMusicPlaylist(playlistUrl: string) {
 }
 
 // ===========================================================================
-// WIKIPEDIA API HELPERS (Movies & Cartoons)
+// TMDB API HELPERS (Movie & Cartoon categories)
 // ===========================================================================
 
-const MOVIE_CATEGORIES: Record<string, string> = {
-  'Action/Drama': 'Category:American_action_films',
-  'Comedy': 'Category:American_comedy_films',
-  'Horror': 'Category:American_horror_films',
-  'Sci-Fi': 'Category:American_science_fiction_films',
-  'Thai Movies': 'Category:Thai_films',
-  'Classic': 'Category:Films_selected_for_preservation_in_the_National_Film_Registry',
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w780';
+
+const MOVIE_GENRE_IDS: Record<string, string> = {
+  'Action/Drama': '28,18',
+  'Comedy': '35',
+  'Horror': '27',
+  'Sci-Fi': '878',
 };
 
-const CARTOON_CATEGORIES: Record<string, string> = {
-  'Disney/Pixar': 'Category:Disney_animated_films',
-  'Cartoon Network': 'Category:Cartoon_Network_original_programming',
-  'Nickelodeon': 'Category:Nickelodeon_original_programming',
-  'Anime': 'Category:Anime_series',
-  'Classic 90s': 'Category:1990s_animated_television_series',
-};
+const CARTOON_NETWORK_SHOWS = [
+  'Tom and Jerry', 'Ben 10', 'The Powerpuff Girls', "Dexter's Laboratory",
+  'Samurai Jack', 'Adventure Time', 'Regular Show', 'Courage the Cowardly Dog',
+  'Ed, Edd n Eddy', 'Johnny Bravo', 'We Bare Bears', 'Steven Universe',
+  'The Amazing World of Gumball', 'Codename: Kids Next Door',
+];
 
-async function fetchWikipediaCategoryMembers(categoryName: string): Promise<string[]> {
+const NICKELODEON_SHOWS = [
+  'SpongeBob SquarePants', 'Dora the Explorer', 'The Fairly OddParents',
+  'Avatar: The Last Airbender', 'Danny Phantom', 'Jimmy Neutron',
+  'Rugrats', 'Hey Arnold!', 'CatDog', 'Invader Zim',
+  'The Wild Thornberrys', 'The Loud House', 'PAW Patrol',
+  'Teenage Mutant Ninja Turtles',
+];
+
+function getTMDBHeaders(): Record<string, string> | null {
+  const token = process.env.TMDB_READ_ACCESS_TOKEN;
+  if (!token) return null;
+  return { Authorization: `Bearer ${token}`, Accept: 'application/json' };
+}
+
+async function fetchTMDBDiscover(type: 'movie' | 'tv', params: Record<string, string>): Promise<any[]> {
+  const headers = getTMDBHeaders();
+  if (!headers) return [];
+  
   try {
-    const res = await axios.get(
-      `https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=${encodeURIComponent(categoryName)}&cmlimit=250&cmnamespace=0&format=json`,
-      { headers: { 'User-Agent': 'GuessTheMusic/1.0' }, timeout: 10000 }
-    );
-    const members = res.data.query?.categorymembers || [];
-    return members.map((m: any) => m.title);
+    let allResults: any[] = [];
+    for (let page = 1; page <= 3; page++) {
+      const queryParams = new URLSearchParams({
+        ...params,
+        page: page.toString(),
+        language: 'en-US'
+      });
+      if (!params.sort_by) queryParams.set('sort_by', 'popularity.desc');
+      if (!params['vote_count.gte']) queryParams.set('vote_count.gte', '1000'); // Ensure highly popular/famous titles
+      
+      const res = await axios.get(`${TMDB_BASE_URL}/discover/${type}?${queryParams}`, { headers });
+      allResults = allResults.concat(res.data.results || []);
+    }
+    return allResults;
   } catch (error: any) {
-    console.error(`[Wiki] Failed to fetch category ${categoryName}:`, error.message);
+    console.error('TMDB discover error:', error.response?.data || error.message);
     return [];
   }
 }
 
-async function prepareVisualTracksFromWikipedia(categoryKey: string, type: 'movie' | 'cartoon', roomCategory: string): Promise<Track[]> {
-  const categoryMap = roomCategory === 'MOVIE' ? MOVIE_CATEGORIES : CARTOON_CATEGORIES;
-  const categoryName = categoryMap[categoryKey];
+async function searchTMDB(query: string, type: 'movie' | 'tv'): Promise<any | null> {
+  const headers = getTMDBHeaders();
+  if (!headers) return null;
   
-  if (!categoryName) {
-    console.error(`[Wiki] Invalid category key: ${categoryKey}`);
-    return [];
-  }
-
-  console.log(`[Wiki] Fetching titles for ${roomCategory} -> ${categoryName}`);
-  const allTitles = await fetchWikipediaCategoryMembers(categoryName);
-  
-  if (allTitles.length === 0) return [];
-
-  // Filter out lists and non-titles
-  const validTitles = allTitles.filter(t => !t.toLowerCase().startsWith('list of '));
-  const shuffled = shuffleArray(validTitles);
-  
-  // Take a buffer of ~40 to try to find ones with good poster images
-  const buffer = shuffled.slice(0, Math.min(shuffled.length, 50));
-  
-  console.log(`[Wiki] Querying images for ${buffer.length} titles...`);
-  
-  const tracksWithImages = await Promise.all(buffer.map(async (title: string) => {
-    try {
-      const res = await axios.get(
-        `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
-        { headers: { 'User-Agent': 'GuessTheMusic/1.0' }, timeout: 5000 }
-      );
-      
-      const data = res.data;
-      if (data.type === 'disambiguation' || !data.thumbnail?.source) return null;
-
-      // Clean up title (remove " (film)" or " (TV series)" etc.)
-      const cleanTitle = title.replace(/\s*\(.*?\)\s*/g, '').trim();
-
-      // For Artist/Description we can use the short description or year if available
-      let description = data.description || '';
-      let artist = type === 'movie' ? 'Movie' : 'Cartoon';
-      
-      if (description) {
-        // e.g. "1994 American animated film"
-        const yearMatch = description.match(/\b(19\d{2}|20\d{2})\b/);
-        if (yearMatch) artist = yearMatch[0];
+  try {
+    const res = await axios.get(`${TMDB_BASE_URL}/search/${type}`, {
+      params: { query, language: 'en-US', page: 1 },
+      headers
+    });
+    
+    // We only want extremely popular/famous shows even from search, and require a backdrop
+    const results = res.data.results;
+    if (results && results.length > 0) {
+      const bestMatch = results.find((r: any) => r.backdrop_path && r.vote_count > 50) || results[0];
+      if (bestMatch && (bestMatch.backdrop_path || bestMatch.poster_path)) {
+        return bestMatch;
       }
-
-      return {
-        id: `wiki-${data.pageid}`,
-        name: cleanTitle,
-        artist: artist,
-        previewUrl: '',
-        albumArt: '',
-        imageUrl: data.thumbnail.source.replace(/\/\d+px-/, '/800px-')
-      };
-    } catch {
-      return null;
     }
-  }));
+  } catch (error: any) {
+    console.error(`TMDB search error for "${query}":`, error.response?.data || error.message);
+  }
+  return null;
+}
 
-  const validTracks = tracksWithImages.filter((t): t is NonNullable<typeof t> => t !== null);
-  console.log(`[Wiki] Successfully prepared ${validTracks.length} tracks with images.`);
-  return validTracks;
+function tmdbToTrack(item: any, type: 'movie' | 'tv'): Track {
+  // Use backdrop_path to avoid movie titles written in posters. Fallback to poster_path if none exists.
+  const imagePath = item.backdrop_path || item.poster_path;
+  return {
+    id: `tmdb-${item.id}`,
+    name: type === 'movie' ? item.title : item.name,
+    artist: type === 'movie'
+      ? (item.release_date?.split('-')[0] || 'Unknown Year')
+      : (item.first_air_date?.split('-')[0] || 'Unknown Year'),
+    previewUrl: '',
+    albumArt: '',
+    imageUrl: imagePath ? `${TMDB_IMAGE_BASE}${imagePath}` : ''
+  };
+}
+
+async function fetchMoviesFromTMDB(genre: string): Promise<Track[]> {
+  console.log(`[TMDB] Fetching movies for genre: ${genre}`);
+  const params: Record<string, string> = {};
+  
+  if (genre === 'Thai Movies') {
+    params.with_original_language = 'th';
+    params['vote_count.gte'] = '50'; // Thai movies have lower global vote counts
+  } else if (genre === 'Classic') {
+    params['primary_release_date.lte'] = '2000-12-31';
+    params.sort_by = 'vote_count.desc';
+  } else {
+    const genreIds = MOVIE_GENRE_IDS[genre];
+    if (genreIds) params.with_genres = genreIds;
+  }
+  
+  const results = await fetchTMDBDiscover('movie', params);
+  const tracks = results.filter(m => m.backdrop_path || m.poster_path).map(m => tmdbToTrack(m, 'movie'));
+  console.log(`[TMDB] Found ${tracks.length} movies for genre: ${genre}`);
+  return tracks;
+}
+
+async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
+  console.log(`[TMDB] Fetching cartoons for source: ${source}`);
+  
+  if (source === 'Disney/Pixar') {
+    const results = await fetchTMDBDiscover('movie', {
+      with_genres: '16',
+      with_companies: '2|3',
+      'vote_count.gte': '1000'
+    });
+    return results.filter(m => m.backdrop_path || m.poster_path).map(m => tmdbToTrack(m, 'movie'));
+  }
+  
+  if (source === 'Anime') {
+    const results = await fetchTMDBDiscover('tv', {
+      with_genres: '16',
+      with_original_language: 'ja',
+      'vote_count.gte': '500' // Anime series might have slightly fewer global votes than Disney movies
+    });
+    return results.filter(m => m.backdrop_path || m.poster_path).map(m => tmdbToTrack(m, 'tv'));
+  }
+  
+  if (source === 'Classic 90s') {
+    const results = await fetchTMDBDiscover('tv', {
+      with_genres: '16',
+      'first_air_date.gte': '1985-01-01',
+      'first_air_date.lte': '2002-12-31',
+      'vote_count.gte': '100'
+    });
+    return results.filter(m => m.backdrop_path || m.poster_path).map(m => tmdbToTrack(m, 'tv'));
+  }
+  
+  // Cartoon Network or Nickelodeon — search for specific famous shows
+  const showNames = source === 'Cartoon Network' ? CARTOON_NETWORK_SHOWS : NICKELODEON_SHOWS;
+  const searchResults = await Promise.all(showNames.map(name => searchTMDB(name, 'tv')));
+  const tracks = searchResults
+    .filter((r): r is NonNullable<typeof r> => r !== null && (r.backdrop_path || r.poster_path))
+    .map(r => tmdbToTrack(r, 'tv'));
+  console.log(`[TMDB] Found ${tracks.length} cartoons for source: ${source}`);
+  return tracks;
 }
 
 // ===========================================================================
@@ -944,10 +1006,10 @@ io.on("connection", (socket) => {
         const genre = room.settings.movieGenre || "Action/Drama";
         io.to(roomId).emit("game_status", `Fetching ${genre} movies...`);
         
-        tracks = await prepareVisualTracksFromWikipedia(genre, 'movie', room.category);
+        tracks = await fetchMoviesFromTMDB(genre);
         
         if (tracks.length === 0) {
-          io.to(roomId).emit("error", "Could not fetch movies. Please try another genre.");
+          io.to(roomId).emit("error", "Could not fetch movies. Check TMDB API key in .env");
           return;
         }
         
@@ -959,10 +1021,10 @@ io.on("connection", (socket) => {
         const source = room.settings.cartoonSource || "Disney/Pixar";
         io.to(roomId).emit("game_status", `Fetching ${source} cartoons...`);
         
-        tracks = await prepareVisualTracksFromWikipedia(source, 'cartoon', room.category);
+        tracks = await fetchCartoonsFromTMDB(source);
         
         if (tracks.length === 0) {
-          io.to(roomId).emit("error", "Could not fetch cartoons. Please try another source.");
+          io.to(roomId).emit("error", "Could not fetch cartoons. Check TMDB API key in .env");
           return;
         }
         
