@@ -87,48 +87,55 @@ export function Game() {
       exit={{ opacity: 0, y: -20 }}
       className="w-full max-w-5xl px-4 py-2 flex flex-col min-h-screen relative"
     >
-      <button 
-        onClick={() => actions.setViewingLobby(true)}
-        className="fixed top-6 left-6 p-3 rounded-2xl bg-vox-white border-2 border-vox-black shadow-vox text-vox-black hover:bg-vox-yellow transition-all z-50"
-        title="Room Status"
-      >
-        <ArrowLeft size={20} />
-      </button>
-
       {/* Top Bar */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="bg-vox-black text-vox-white px-2 py-0.5 text-[10px] font-black uppercase tracking-widest">
-              {t.round} {currentRound}/{totalRounds}
-            </span>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pt-4">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => actions.setViewingLobby(true)}
+            className="p-2 rounded-xl bg-vox-white border-2 border-vox-black shadow-vox text-vox-black hover:bg-vox-yellow transition-all flex-shrink-0"
+            title="Room Status"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="bg-vox-black text-vox-white px-2 py-0.5 text-[10px] font-black uppercase tracking-widest">
+                {t.round} {currentRound}/{totalRounds}
+              </span>
+            </div>
+            <h2 className="vox-title text-xl md:text-2xl">{t.the} <span className="bg-vox-yellow px-2 text-black">{t.challenge}</span></h2>
           </div>
-          <h2 className="vox-title text-2xl">{t.the} <span className="bg-vox-yellow px-2 text-black">{t.challenge}</span></h2>
         </div>
 
-        <div className="flex items-center gap-4">
-          {currentTrack.isFrozen && (
-            <div className="bg-blue-100 border-2 border-blue-400 px-3 py-1 flex items-center gap-2 animate-pulse">
-              <Snowflake size={16} className="text-blue-500 animate-spin-slow" />
-              <span className="font-black text-blue-500 text-xs uppercase tracking-widest">{t.timeFrozen}</span>
-            </div>
-          )}
-          {showStreak && (
-            <div className="bg-vox-yellow border-2 border-vox-black px-3 py-1 flex items-center gap-2 animate-bounce">
-              <Flame size={16} className="text-vox-red" fill="currentColor" />
-              <span className="font-black text-vox-black text-xs uppercase tracking-widest">{t.onFire}</span>
-            </div>
-          )}
-          <div className="text-right">
-            <p className="text-[10px] font-black uppercase tracking-widest opacity-40">{t.yourScore}</p>
-            <p className="text-2xl font-black leading-none dark:text-vox-black">{me.score}</p>
+        <div className="flex items-center justify-between md:justify-end gap-3 md:gap-6">
+          <div className="flex items-center gap-2">
+            {currentTrack.isFrozen && (
+              <div className="bg-blue-100 border-2 border-blue-400 px-2 py-1 flex items-center gap-1">
+                <Snowflake size={14} className="text-blue-500" />
+                <span className="font-black text-blue-500 text-[8px] md:text-[10px] uppercase tracking-widest">{t.timeFrozen}</span>
+              </div>
+            )}
+            {showStreak && (
+              <div className="bg-vox-yellow border-2 border-vox-black px-2 py-1 flex items-center gap-1">
+                <Flame size={14} className="text-vox-red" fill="currentColor" />
+                <span className="font-black text-vox-black text-[8px] md:text-[10px] uppercase tracking-widest">{t.onFire}</span>
+              </div>
+            )}
           </div>
-          <TimerDisplay 
-            roundEndTime={roundEndTime} 
-            isTimerStarted={isTimerStarted} 
-            guessTime={room.settings.guessTime}
-            isFrozen={currentTrack.isFrozen}
-          />
+          
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest opacity-40">{t.yourScore}</p>
+              <p className="text-xl md:text-2xl font-black leading-none dark:text-vox-black">{me.score}</p>
+            </div>
+            <TimerDisplay 
+              roundEndTime={roundEndTime} 
+              isTimerStarted={isTimerStarted} 
+              guessTime={room.settings.guessTime}
+              isFrozen={currentTrack.isFrozen}
+            />
+          </div>
         </div>
       </div>
 
@@ -181,12 +188,12 @@ export function Game() {
                   </motion.div>
                 )}
 
-                {/* Only show bouncing dots for music (audio loading indicator) */}
+                {/* Only show dots for music (audio loading indicator) */}
                 {!isVisualCategory && (
                   <div className="flex justify-center gap-2">
-                    <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-2 h-2 bg-vox-black rounded-full animate-bounce [animation-delay:0.4s]" />
+                    <div className="w-2 h-2 bg-vox-black rounded-full opacity-50" />
+                    <div className="w-2 h-2 bg-vox-black rounded-full opacity-50" />
+                    <div className="w-2 h-2 bg-vox-black rounded-full opacity-50" />
                   </div>
                 )}
               </motion.div>
@@ -361,14 +368,14 @@ function TimerDisplay({ roundEndTime, isTimerStarted, guessTime, isFrozen }: any
     };
 
     updateTimer();
-    interval = setInterval(updateTimer, 200); // Reduced frequency to 5 times per second
+    interval = setInterval(updateTimer, 500); // Reduced frequency to 2 times per second
     return () => clearInterval(interval);
   }, [roundEndTime, isTimerStarted, guessTime, isFrozen]);
 
   const progress = (timeLeft / (guessTime || 15)) * 100;
 
   return (
-    <div className="w-12 h-12 bg-vox-black border-4 border-vox-black shadow-vox flex items-center justify-center relative overflow-hidden">
+    <div className="w-12 h-12 bg-vox-black border-4 border-vox-black flex items-center justify-center relative overflow-hidden">
       <motion.div 
         className="absolute bottom-0 left-0 w-full bg-vox-yellow"
         initial={{ height: "100%" }}

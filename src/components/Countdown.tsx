@@ -30,7 +30,7 @@ export function Countdown() {
           transition={{ duration: 0.4, ease: "backOut" }}
           className="relative"
         >
-          <span className="vox-title text-[8rem] md:text-[15rem] text-vox-black drop-shadow-vox">
+          <span className="vox-title text-[8rem] md:text-[15rem] text-vox-black">
             {countdown === 0 ? "GO!" : countdown}
           </span>
           

@@ -97,10 +97,10 @@ export function Lobby() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-vox-paper"
           >
-            <div className="w-16 h-16 border-4 border-vox-black/10 border-t-vox-black rounded-full animate-spin mb-8" />
+            <div className="w-16 h-16 border-4 border-vox-black/10 border-t-vox-black rounded-full mb-8" />
             <div className="text-center space-y-2 px-4">
               <h2 className="vox-title text-2xl md:text-4xl">{t.initializing.split(' ')[0]} <span className="bg-vox-yellow px-2 text-black">{t.initializing.split(' ')[1]}</span></h2>
-              <p className="handwritten text-lg md:text-xl opacity-60 animate-pulse">{gameStatus}</p>
+              <p className="handwritten text-lg md:text-xl opacity-60">{gameStatus}</p>
             </div>
           </motion.div>
         )}
@@ -229,8 +229,8 @@ export function Lobby() {
             <div className="tape -bottom-4 -right-4 rotate-12" />
             
             <div className="relative mb-8 md:mb-12">
-              <div className="w-24 h-24 md:w-32 md:h-32 border-8 border-vox-black/10 border-t-vox-black rounded-full animate-spin" />
-              <Disc3 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-vox-black animate-pulse" size={40} />
+              <div className="w-24 h-24 md:w-32 md:h-32 border-8 border-vox-black/10 border-t-vox-black rounded-full" />
+              <Disc3 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-vox-black" size={40} />
             </div>
             
             <h2 className="vox-title text-3xl md:text-5xl mb-4 text-vox-black">{t.synchronizing}</h2>

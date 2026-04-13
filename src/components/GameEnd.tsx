@@ -200,7 +200,7 @@ export function GameEnd() {
                 </button>
               ) : (
                 <div className="vox-card bg-vox-paper/50 text-center py-8">
-                  <div className="flex items-center justify-center gap-2 text-vox-black mb-2 animate-pulse">
+                  <div className="flex items-center justify-center gap-2 text-vox-black mb-2">
                     <Star size={16} fill="currentColor" />
                     <span className="text-xs font-black uppercase tracking-widest">{t.waitingHost}</span>
                   </div>
