@@ -72,6 +72,10 @@ body {
   @apply bg-vox-card-bg border-2 border-vox-black shadow-vox p-6 transition-colors;
 }
 
+.vox-card.selected {
+  @apply translate-x-[4px] translate-y-[4px] shadow-none scale-[0.98] bg-vox-yellow;
+}
+
 .vox-button {
   @apply bg-vox-yellow border-2 border-vox-black shadow-vox px-6 py-3 font-bold uppercase tracking-tighter transition-all text-black cursor-pointer;
 }

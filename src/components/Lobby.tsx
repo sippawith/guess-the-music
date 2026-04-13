@@ -442,7 +442,7 @@ export function Lobby() {
                       <button
                         key={mode.id}
                         onClick={() => actions.updateSettings({ gameMode: mode.id as any })}
-                        className={`vox-button py-3 text-[10px] font-black uppercase tracking-widest ${room.settings.gameMode === mode.id ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
+                        className={`vox-button py-3 text-[10px] font-black uppercase tracking-widest ${room.settings.gameMode === mode.id ? 'selected bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
                       >
                         {mode.label}
                       </button>
@@ -474,7 +474,7 @@ export function Lobby() {
                         <button
                           key={target.id}
                           onClick={() => actions.updateSettings({ guessTarget: target.id as any })}
-                          className={`vox-button py-3 text-[10px] font-black uppercase tracking-widest ${room.settings.guessTarget === target.id ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
+                          className={`vox-button py-3 text-[10px] font-black uppercase tracking-widest ${room.settings.guessTarget === target.id ? 'selected bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
                         >
                           {target.label}
                         </button>
@@ -653,7 +653,7 @@ export function Lobby() {
                                       setSelectedLanguages(prev => [...prev, lang]);
                                     }
                                   }}
-                                  className={`vox-button py-2 px-6 text-[10px] font-black uppercase tracking-widest ${selectedLanguages.includes(lang) ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
+                                  className={`vox-button py-2 px-6 text-[10px] font-black uppercase tracking-widest ${selectedLanguages.includes(lang) ? 'selected bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
                                 >
                                   {lang}
                                 </button>
@@ -677,7 +677,7 @@ export function Lobby() {
                         <button
                           key={genre}
                           onClick={() => actions.updateSettings({ movieGenre: genre })}
-                          className={`vox-button py-6 text-[10px] font-black uppercase tracking-widest ${room.settings.movieGenre === genre ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
+                          className={`vox-button py-6 text-[10px] font-black uppercase tracking-widest ${room.settings.movieGenre === genre ? 'selected bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
                         >
                           {genre}
                         </button>
@@ -697,7 +697,7 @@ export function Lobby() {
                         <button
                           key={source}
                           onClick={() => actions.updateSettings({ cartoonSource: source })}
-                          className={`vox-button py-6 text-[10px] font-black uppercase tracking-widest ${room.settings.cartoonSource === source ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
+                          className={`vox-button py-6 text-[10px] font-black uppercase tracking-widest ${room.settings.cartoonSource === source ? 'selected bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
                         >
                           {source}
                         </button>
@@ -717,7 +717,7 @@ export function Lobby() {
                         <button
                           key={region}
                           onClick={() => actions.updateSettings({ landmarkRegion: region })}
-                          className={`vox-button py-6 text-[10px] font-black uppercase tracking-widest ${room.settings.landmarkRegion === region ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
+                          className={`vox-button py-6 text-[10px] font-black uppercase tracking-widest ${room.settings.landmarkRegion === region ? 'selected bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}
                         >
                           {region}
                         </button>

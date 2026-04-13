@@ -132,7 +132,7 @@ export function Home() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`vox-card group relative transition-all text-left ${
                   selectedCategory === cat.id 
-                    ? 'bg-vox-yellow -translate-x-1 -translate-y-1 shadow-vox-lg text-black' 
+                    ? 'selected bg-vox-yellow text-black' 
                     : 'hover:-translate-x-1 hover:-translate-y-1 hover:shadow-vox-lg text-vox-black'
                 }`}
               >
