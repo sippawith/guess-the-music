@@ -32,10 +32,10 @@ export function AudioPlayer() {
           actions.trackPlaying();
         };
       } else if (!currentTrack.previewUrl) {
-        // No audio for this track/category, play Kahoot-like background music
-        const bgMusicUrl = "https://upload.wikimedia.org/wikipedia/commons/3/34/Kevin_MacLeod_-_Monkeys_Spinning_Monkeys.ogg";
+        // No audio for this track/category, play Kahoot lobby music
+        const bgMusicUrl = "https://archive.org/download/KahootLobbyMusic/Kahoot%20Lobby%20Music%20%28HD%29.mp3";
         if (audioRef.current) {
-          if (!audioRef.current.src.includes("Monkeys_Spinning_Monkeys")) {
+          if (!audioRef.current.src.includes("Kahoot")) {
             audioRef.current.src = bgMusicUrl;
             audioRef.current.volume = 0.3; // Lower volume for background
             audioRef.current.loop = true;
