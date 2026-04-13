@@ -7,23 +7,10 @@ import {
   Globe, ArrowLeft, Heart, Flame, Sparkles, TrendingUp
 } from 'lucide-react';
 
-import { playSound } from '../utils/sounds';
-
 export function RoundEnd() {
-  const { lastRoundResult, intermissionEndTime, intermissionDuration, room, actions, likedTracks, language, socket } = useGameStore();
-  const t = translations[language];
+  const { lastRoundResult, intermissionEndTime, intermissionDuration, room, actions, likedTracks } = useGameStore();
+  const t = translations.en;
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (lastRoundResult && socket?.id) {
-      const myGuess = lastRoundResult.guesses[socket.id];
-      if (myGuess?.correct) {
-        playSound('correct');
-      } else {
-        playSound('wrong');
-      }
-    }
-  }, [lastRoundResult, socket?.id]);
 
   useEffect(() => {
     if (intermissionEndTime) {
@@ -140,22 +127,20 @@ export function RoundEnd() {
                     <span className="bg-vox-black text-vox-white px-3 py-1 text-[10px] font-black uppercase tracking-widest">
                       {room.category} {t.identity}
                     </span>
-                      <button
-                        onClick={() => {
-                          playSound('click');
-                          const likedTrack = {
-                            id: track.name + track.artist,
-                            name: track.name,
-                            artist: track.artist,
-                            albumArt: track.albumArt
-                          };
-                          const isLiked = likedTracks.some(t => t.id === likedTrack.id);
-                          if (isLiked) actions.unlikeTrack(likedTrack.id);
-                          else actions.likeTrack(likedTrack);
-                        }}
-                        onMouseEnter={() => playSound('hover')}
-                        className={`p-3 border-2 border-vox-black shadow-vox transition-all ${likedTracks.some(t => t.id === track.name + track.artist) ? 'bg-vox-red text-white' : 'bg-vox-white hover:bg-vox-yellow'}`}
-                      >
+                    <button
+                      onClick={() => {
+                        const likedTrack = {
+                          id: track.name + track.artist,
+                          name: track.name,
+                          artist: track.artist,
+                          albumArt: track.albumArt
+                        };
+                        const isLiked = likedTracks.some(t => t.id === likedTrack.id);
+                        if (isLiked) actions.unlikeTrack(likedTrack.id);
+                        else actions.likeTrack(likedTrack);
+                      }}
+                      className={`p-3 border-2 border-vox-black shadow-vox transition-all ${likedTracks.some(t => t.id === track.name + track.artist) ? 'bg-vox-red text-white' : 'bg-vox-white hover:bg-vox-yellow'}`}
+                    >
                       <Heart size={20} fill={likedTracks.some(t => t.id === track.name + track.artist) ? "currentColor" : "none"} />
                     </button>
                   </div>

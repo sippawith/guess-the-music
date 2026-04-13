@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { playSound, playBackgroundMusic, stopBackgroundMusic } from '../utils/sounds';
 import { translations } from '../translations';
 import { 
   Send, Sparkles, Lightbulb, CheckCircle2,
@@ -17,8 +16,8 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 export function Game() {
-  const { room, currentTrack, roundEndTime, isTimerStarted, actions, socket, language } = useGameStore();
-  const t = translations[language];
+  const { room, currentTrack, roundEndTime, isTimerStarted, actions, socket } = useGameStore();
+  const t = translations.en;
   const [guess, setGuess] = useState('');
   const [hasGuessedThisRound, setHasGuessedThisRound] = useState(false);
   const [localGuess, setLocalGuess] = useState<string | null>(null);
@@ -36,19 +35,13 @@ export function Game() {
 
   useEffect(() => {
     if (room?.countdown && room.countdown > 0) {
-      playSound('countdown');
+      if (!countdownAudioRef.current) {
+        countdownAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+      }
+      countdownAudioRef.current.currentTime = 0;
+      countdownAudioRef.current.play().catch(() => {});
     }
   }, [room?.countdown]);
-
-  useEffect(() => {
-    // Play background music for non-music categories when round is active
-    if (isVisualCategory && isTimerStarted) {
-      playBackgroundMusic();
-    } else {
-      stopBackgroundMusic();
-    }
-    return () => stopBackgroundMusic();
-  }, [isVisualCategory, isTimerStarted]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -283,8 +276,6 @@ export function Game() {
                 />
                 <button 
                   type="submit"
-                  onMouseEnter={() => playSound('hover')}
-                  onClick={() => playSound('click')}
                   className="vox-button px-6 bg-vox-black text-vox-white hover:bg-vox-white hover:text-vox-black transition-all"
                 >
                   <Send size={20} />
@@ -305,14 +296,12 @@ export function Game() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8, filter: "blur(10px)" }}
                         transition={{ delay: i * 0.05 }}
-                        onMouseEnter={() => playSound('hover')}
                         onClick={() => {
-                          playSound('pop');
                           actions.submitGuess(choice);
                           setLocalGuess(choice);
                           setHasGuessedThisRound(true);
                         }}
-                        className={`vox-button py-2.5 text-xs font-black px-4 bg-vox-white hover:bg-vox-yellow transition-all ${localGuess === choice ? 'selected bg-vox-yellow' : 'bg-vox-white'}`}
+                        className={`vox-button py-2.5 text-xs font-black px-4 bg-vox-white hover:bg-vox-black hover:text-vox-white transition-all ${localGuess === choice ? 'selected' : ''}`}
                       >
                         <span className="block truncate w-full">{choice}</span>
                       </motion.button>
