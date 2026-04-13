@@ -5,7 +5,7 @@ import http from "http";
 import path from "path";
 import axios from "axios";
 import dotenv from "dotenv";
-import { MOVIE_CLUES, CARTOON_CLUES, LANDMARK_CLUES } from "./src/data/gameContent.ts";
+// Category data removed
 
 dotenv.config();
 
@@ -350,7 +350,7 @@ interface Room {
   id: string;
   players: Record<string, Player>;
   state: "LOBBY" | "PLAYING" | "ROUND_END" | "GAME_END";
-  category: "MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK";
+  category: "MUSIC";
   settings: {
     guessTime: number;
     numTracks: number;
@@ -359,9 +359,6 @@ interface Room {
     guessTarget: "SONG" | "ARTIST" | "BOTH";
     intermissionTime: number;
     numChoices: number;
-    movieGenre?: string;
-    cartoonSource?: string;
-    landmarkRegion?: string;
     hintsPerGame: number;
     abilitiesEnabled: boolean;
     abilitiesPerGame: number;
@@ -556,7 +553,7 @@ io.on("connection", (socket) => {
         }
       },
       state: "LOBBY",
-      category: category || "MUSIC",
+      category: "MUSIC",
       hintsUsed: 0,
       settings: { 
         guessTime: 15, 
@@ -566,9 +563,6 @@ io.on("connection", (socket) => {
         guessTarget: "BOTH",
         intermissionTime: 8,
         numChoices: 4,
-        movieGenre: "Action/Drama",
-        cartoonSource: "Disney/CN",
-        landmarkRegion: "Global",
         hintsPerGame: 3,
         abilitiesEnabled: true,
         abilitiesPerGame: 3
@@ -860,12 +854,7 @@ io.on("connection", (socket) => {
 
       choices = [getChoiceText(currentTrack)];
       
-      // Get decoys from the same category pool if it's a non-music category
-      let decoyPool: any[] = [];
-      if (room.category === "MOVIE") decoyPool = MOVIE_CLUES;
-      else if (room.category === "CARTOON") decoyPool = CARTOON_CLUES;
-      else if (room.category === "LANDMARK") decoyPool = LANDMARK_CLUES;
-      else decoyPool = room.tracks; // For music, use the current tracks
+      const decoyPool = room.tracks;
 
       const allOtherChoices = Array.from(new Set(decoyPool.map(t => getChoiceText(t))))
         .filter(c => c !== choices[0]);
@@ -1022,15 +1011,13 @@ io.on("connection", (socket) => {
     if (ability === 'hint') {
       let hint = "";
       if (room.category === "MUSIC") {
-        if (target === "SONG") {
-          hint = `Artist: ${currentTrack.artist}`;
-        } else if (target === "ARTIST") {
-          hint = `Song: ${currentTrack.name}`;
-        } else {
-          hint = `Artist: ${currentTrack.artist.substring(0, 3)}...`;
-        }
+      if (target === "SONG") {
+        hint = `Artist: ${currentTrack.artist}`;
+      } else if (target === "ARTIST") {
+        hint = `Song: ${currentTrack.name}`;
       } else {
-        hint = currentTrack.description?.substring(0, 30) + "..." || `Starts with: ${currentTrack.name.substring(0, 2)}...`;
+        hint = `Artist: ${currentTrack.artist.substring(0, 3)}...`;
+      }
       }
       player.abilities[ability]--;
       socket.emit("hint_revealed", { hint, playerSpecific: true });

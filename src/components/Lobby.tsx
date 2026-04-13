@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import axios from 'axios';
-import { MOVIE_CLUES, CARTOON_CLUES, LANDMARK_CLUES } from '../data/gameContent';
+// Non-music clue data removed
 import { translations } from '../translations';
 
 function SettingInput({ label, icon: Icon, value, min, max, onChange }: { 
@@ -72,7 +72,6 @@ export function Lobby() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [isGeneratingClues, setIsGeneratingClues] = useState(false);
   const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [detectedLanguages, setDetectedLanguages] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
@@ -177,80 +176,34 @@ export function Lobby() {
     const silentAudio = new Audio("data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB");
     silentAudio.play().catch(() => {});
 
-    if (room.category === 'MUSIC') {
-      if (!selectedPlaylist) return;
-      
-      let customTracks: any[] | undefined = undefined;
-      
-      if (playlistTracks.length > 0) {
-        if (selectedLanguages.length < detectedLanguages.length) {
-          // Simple local filter
-          const thaiRegex = /[\u0E00-\u0E7F]/;
-          const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
-          const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uD7B0-\uD7FF]/;
-          const chineseRegex = /[\u4E00-\u9FFF]/;
+    if (!selectedPlaylist) return;
+    
+    let customTracks: any[] | undefined = undefined;
+    
+    if (playlistTracks.length > 0) {
+      if (selectedLanguages.length < detectedLanguages.length) {
+        // Simple local filter
+        const thaiRegex = /[\u0E00-\u0E7F]/;
+        const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
+        const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uD7B0-\uD7FF]/;
+        const chineseRegex = /[\u4E00-\u9FFF]/;
 
-          customTracks = playlistTracks.filter(t => {
-            const text = (t.name + " " + t.artist);
-            const trackLangs = ["English"];
-            if (thaiRegex.test(text)) trackLangs.push("Thai");
-            if (japaneseRegex.test(text)) trackLangs.push("Japanese");
-            if (koreanRegex.test(text)) trackLangs.push("Korean");
-            if (chineseRegex.test(text)) trackLangs.push("Chinese");
-            
-            return trackLangs.some(l => selectedLanguages.includes(l));
-          });
-        } else {
-          customTracks = playlistTracks;
-        }
+        customTracks = playlistTracks.filter(t => {
+          const text = (t.name + " " + t.artist);
+          const trackLangs = ["English"];
+          if (thaiRegex.test(text)) trackLangs.push("Thai");
+          if (japaneseRegex.test(text)) trackLangs.push("Japanese");
+          if (koreanRegex.test(text)) trackLangs.push("Korean");
+          if (chineseRegex.test(text)) trackLangs.push("Chinese");
+          
+          return trackLangs.some(l => selectedLanguages.includes(l));
+        });
+      } else {
+        customTracks = playlistTracks;
       }
-
-      actions.startGame(selectedPlaylist.id, undefined, customTracks);
-    } else {
-      setIsGeneratingClues(true);
-      // Simulate a small delay for "Initialization" feel
-      setTimeout(() => {
-        try {
-          let sourceList: any[] = [];
-          if (room.category === "MOVIE") sourceList = [...MOVIE_CLUES];
-          else if (room.category === "CARTOON") sourceList = [...CARTOON_CLUES];
-          else if (room.category === "LANDMARK") sourceList = [...LANDMARK_CLUES];
-
-          // Shuffle and pick
-          const shuffled = sourceList.sort(() => Math.random() - 0.5);
-          const selected = shuffled.slice(0, room.settings.numTracks || 5);
-
-          const customTracks = selected.map((c: any, i: number) => {
-            // Use comma-separated tags for better relevance with LoremFlickr
-            // We combine the specific clue name with the category
-            // We take only the first 2 words of the name to keep the search broad and fast
-            const nameTags = (c.imageUrl || c.name).split(' ').slice(0, 2);
-            const tags = nameTags.concat(room.category.toLowerCase()).join(',');
-            const searchTerms = encodeURIComponent(tags);
-            
-            // Use LoremFlickr directly for faster initial response
-            const imgUrl = `https://loremflickr.com/800/600/${searchTerms}?lock=${i}-${Date.now()}`;
-            
-            return {
-              id: `clue-${i}-${Date.now()}`,
-              name: c.name,
-              artist: c.artist,
-              description: c.description,
-              imageUrl: imgUrl,
-              previewUrl: "",
-              albumArt: imgUrl
-            };
-          });
-
-          actions.startGame("", undefined, customTracks);
-        } catch (error) {
-          console.error("Content preparation failed:", error);
-          alert("Failed to prepare game content. Please try again.");
-        } finally {
-          setIsGeneratingClues(false);
-        }
-      }, 800);
     }
+
+    actions.startGame(selectedPlaylist.id, undefined, customTracks);
   };
 
   if (!room || !socket) return null;
@@ -744,13 +697,13 @@ export function Lobby() {
 
             <button
               onClick={handleStartGame}
-              disabled={(room.category === 'MUSIC' && (!selectedPlaylist || isDetectingLanguages)) || isGeneratingClues}
+              disabled={!selectedPlaylist || isDetectingLanguages}
               className="w-full vox-button py-8 text-2xl flex items-center justify-center gap-6 bg-vox-black text-vox-white hover:bg-vox-yellow hover:text-vox-black transition-all shadow-vox-lg"
             >
               <Play size={32} fill="currentColor" />
               <div className="flex flex-col items-start">
                 <span className="font-black uppercase tracking-[0.2em] leading-none">
-                  {isGeneratingClues ? t.generating : (room.category === 'MUSIC' && isDetectingLanguages) ? t.analyzing : t.startSession}
+                  {isDetectingLanguages ? t.analyzing : t.startSession}
                 </span>
               </div>
             </button>

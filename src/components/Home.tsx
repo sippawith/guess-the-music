@@ -1,21 +1,17 @@
 import { useState } from 'react';
 import { useGameStore } from '../store';
-import { Music, Play, Film, Tv, MapPin, Terminal, Hash, Fingerprint } from 'lucide-react';
+import { Music, Play, Terminal, Hash, Fingerprint } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from '../translations';
 
 const CATEGORIES = [
   { id: 'MUSIC', name: 'Music', icon: Music, color: '#ffeb00', desc: 'Spotify & Apple Playlists' },
-  { id: 'MOVIE', name: 'Movies', icon: Film, color: '#ffeb00', desc: 'Memorable Scenes' },
-  { id: 'CARTOON', name: 'Cartoons', icon: Tv, color: '#ffeb00', desc: 'Disney & CN Classics' },
-  { id: 'LANDMARK', name: 'Landmarks', icon: MapPin, color: '#ffeb00', desc: 'Global Wonders' },
 ] as const;
 
 export function Home() {
   const { playerName, actions } = useGameStore();
   const t = translations.en;
   const [joinCode, setJoinCode] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number]['id']>('MUSIC');
   const [showCreate, setShowCreate] = useState(false);
 
   const unlockAudio = () => {
@@ -42,7 +38,8 @@ export function Home() {
           </motion.span>
           <h1 className="vox-title text-7xl md:text-[10rem] leading-[0.85] mb-4 text-vox-black">
             {t.title.split(' ')[0]}<br />
-            <span className="bg-vox-yellow px-4 text-black">{t.title.split(' ')[1]}</span>
+            {t.title.split(' ')[1]}<br />
+            <span className="bg-vox-yellow px-4 text-black">{t.title.split(' ')[2]}</span>
           </h1>
           <div className="flex items-center gap-4 mt-4">
             <div className="h-1 w-24 bg-vox-black" />
@@ -116,40 +113,15 @@ export function Home() {
           </button>
         </div>
 
-        {/* Right: Category Selection */}
+        {/* Right: Info */}
         <div className="lg:col-span-7">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <Terminal size={20} className="text-vox-black" />
-              <h3 className="font-black uppercase tracking-tighter text-xl text-vox-black">{t.selectCategory}</h3>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`vox-card group relative transition-all text-left ${
-                  selectedCategory === cat.id 
-                    ? 'selected bg-vox-yellow text-black' 
-                    : 'hover:-translate-x-1 hover:-translate-y-1 hover:shadow-vox-lg text-vox-black'
-                }`}
-              >
-                {selectedCategory === cat.id && <div className="tape -top-2 -right-2 bg-vox-black/10" />}
-                <div className="flex items-start justify-between mb-4">
-                  <cat.icon 
-                    size={32} 
-                    className={`transition-transform group-hover:rotate-12 ${selectedCategory === cat.id ? 'text-vox-black' : 'text-vox-black/40'}`}
-                  />
-                  <span className="font-serif italic text-4xl opacity-10 group-hover:opacity-20 transition-opacity">0{CATEGORIES.indexOf(cat) + 1}</span>
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-2xl font-black uppercase tracking-tighter">{cat.name}</h4>
-                  <p className="text-[10px] font-black uppercase tracking-widest opacity-40">{cat.desc}</p>
-                </div>
-              </button>
-            ))}
+          <div className="vox-card h-full p-12 flex flex-col items-center justify-center text-center relative overflow-visible">
+            <div className="tape -top-4 -right-4 rotate-12" />
+            <Music size={120} className="text-vox-black/10 mb-8" />
+            <h3 className="vox-title text-4xl mb-4 text-vox-black">{t.selectCategory}</h3>
+            <p className="handwritten text-xl opacity-60 text-vox-black max-w-sm">
+              Connect your favorite Spotify or Apple Music playlists and challenge your friends to identify tracks at record speed.
+            </p>
           </div>
         </div>
       </div>
@@ -170,20 +142,17 @@ export function Home() {
               <div className="tape -top-6 left-1/2 -translate-x-1/2 w-32" />
               
               <div className="inline-flex items-center justify-center w-24 h-24 bg-vox-yellow border-4 border-vox-black mb-8 rotate-3">
-                {(() => {
-                  const Icon = CATEGORIES.find(c => c.id === selectedCategory)?.icon || Music;
-                  return <Icon size={48} className="text-black" />;
-                })()}
+                <Music size={48} className="text-black" />
               </div>
               
               <h2 className="vox-title text-5xl mb-2 italic text-vox-black">{t.confirmSelection}</h2>
               <p className="handwritten text-xl mb-12 text-vox-black">
-                {t.readyToStart} {selectedCategory}?
+                {t.readyToStart} Music?
               </p>
               
               <div className="flex flex-col gap-4">
                 <button
-                  onClick={() => actions.createRoom(selectedCategory)}
+                  onClick={() => actions.createRoom('MUSIC')}
                   className="vox-button py-6 text-xl"
                 >
                   {t.initializeGame}

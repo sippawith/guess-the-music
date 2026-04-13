@@ -1,20 +1,69 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+<img width="1200" height="475" alt="GUESS THE MUSIC Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# GUESS THE MUSIC 🎵
 
-This contains everything you need to run your app locally.
+A high-energy, social music guessing game where players compete to identify tracks from their favorite Spotify and Apple Music playlists at record speed.
 
-View your app in AI Studio: https://ai.studio/apps/831000ef-003e-4741-a64b-6c549d35b15c
+## ✨ Features
 
-## Run Locally
+- **Multiplayer Hub**: Create private rooms and invite friends using unique session codes.
+- **Playlist Integration**: Search for any public Spotify playlist or paste a direct link from Apple Music.
+- **Tactical Power-ups**:
+  - **Reveal**: Get a hint about the current track.
+  - **50/50**: Eliminate two incorrect choices in choice-based modes.
+  - **Freeze**: Pause the timer globally for 5 seconds to give yourself a moment to think.
+- **Dynamic Game Modes**: Choose between manual typing for a challenge or multiple-choice for faster rounds.
+- **Real-time Scoring**: Time-decay scoring system with streak multipliers for accurate, fast guesses.
+- **Linguistic Filtering**: Automatically analyze playlists to filter by language (Thai, Japanese, Korean, etc.).
 
-**Prerequisites:**  Node.js
+## 🚀 Getting Started
 
+### Prerequisites
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+- [Node.js](https://nodejs.org/) (v18 or later)
+- [npm](https://www.npmjs.com/)
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/sippawith/guess-the-music.git
+   cd guess-the-music
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables:**
+   Create a `.env` file in the root directory based on `.env.example`:
+   ```env
+   # YouTube Data API Key (Optional fallback)
+   YOUTUBE_API_KEY=your_key_here
+
+   # Spotify API Credentials (Required for playlist features)
+   SPOTIFY_CLIENT_ID=your_id_here
+   SPOTIFY_CLIENT_SECRET=your_secret_here
+   
+   APP_URL=http://localhost:3000
+   ```
+
+4. **Run the application:**
+   ```bash
+   npm run dev
+   ```
+
+The application will be available at `http://localhost:3000`.
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 19, Vite, Tailwind CSS, Lucide React, Motion.
+- **Backend**: Express, Socket.io, Axios.
+- **State Management**: Zustand.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
