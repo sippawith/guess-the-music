@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
 
+export interface ChatMessage {
+  id: string;
+  playerName: string;
+  message: string;
+  timestamp: number;
+  playerId: string;
+}
+
 interface Player {
   id: string;
   name: string;
@@ -118,6 +126,10 @@ interface GameState {
   // UI State
   theme: 'light' | 'dark';
   viewingLobby: boolean;
+  
+  // Chat
+  chatMessages: ChatMessage[];
+  isChatOpen: boolean;
 
   actions: {
     setSelectedPlaylist: (playlist: { id: string, name: string, image: string, url?: string } | null) => void;
@@ -141,6 +153,9 @@ interface GameState {
     trackPlaying: () => void;
     likeTrack: (track: LikedTrack) => void;
     unlikeTrack: (trackId: string) => void;
+    sendChatMessage: (message: string) => void;
+    toggleChat: () => void;
+    setChatOpen: (isOpen: boolean) => void;
   };
 }
 
@@ -185,6 +200,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   viewingLobby: false,
 
   theme: 'light',
+  
+  chatMessages: [],
+  isChatOpen: false,
 
   actions: {
     setSelectedPlaylist: (playlist) => set({ selectedPlaylist: playlist }),
@@ -308,6 +326,12 @@ export const useGameStore = create<GameState>((set, get) => ({
         // Game end logic
       });
 
+      socket.on('chat_message', (message: ChatMessage) => {
+        set((state) => ({
+          chatMessages: [...state.chatMessages, message]
+        }));
+      });
+
       set({ socket });
     },
     
@@ -368,7 +392,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       if (socket && roomId) {
         socket.emit('leave_room', { roomId });
       }
-      set({ roomId: null, room: null, gameStatus: null, currentTrack: null, viewingLobby: false });
+      set({ roomId: null, room: null, gameStatus: null, currentTrack: null, viewingLobby: false, chatMessages: [] });
     },
     
     clearError: () => set({ error: null }),
@@ -386,6 +410,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
     unlikeTrack: (trackId: string) => set((state) => ({
       likedTracks: state.likedTracks.filter(t => t.id !== trackId)
-    }))
+    })),
+    sendChatMessage: (message: string) => {
+      const { socket, roomId } = get();
+      if (socket && roomId) {
+        socket.emit('chat_message', { roomId, message });
+      }
+    },
+    toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
+    setChatOpen: (isOpen: boolean) => set({ isChatOpen: isOpen })
   }
 }));

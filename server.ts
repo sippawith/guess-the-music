@@ -882,6 +882,25 @@ io.on("connection", (socket) => {
   }
 
   // =========================================================================
+  // CHAT
+  // =========================================================================
+
+  socket.on("chat_message", ({ roomId, message }) => {
+    const room = rooms[roomId];
+    if (!room) return;
+    const player = room.players[socket.id];
+    if (!player) return;
+
+    io.to(roomId).emit("chat_message", {
+      id: Math.random().toString(36).substring(2, 9),
+      playerName: player.name,
+      message,
+      timestamp: Date.now(),
+      playerId: socket.id
+    });
+  });
+
+  // =========================================================================
   // DISCONNECT
   // =========================================================================
 

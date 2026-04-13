@@ -7,6 +7,7 @@ import { RoundEnd } from './components/RoundEnd';
 import { GameEnd } from './components/GameEnd';
 import { Countdown } from './components/Countdown';
 import { AudioPlayer } from './components/AudioPlayer';
+import { Chat } from './components/Chat';
 import { AlertCircle, Sun, Moon, Languages } from 'lucide-react';
 
 export default function App() {
@@ -57,6 +58,9 @@ export default function App() {
         {room && !viewingLobby && room.state === 'ROUND_END' && <RoundEnd />}
         {room && !viewingLobby && room.state === 'GAME_END' && <GameEnd />}
       </main>
+
+      {/* Chat Component - only show if in a room */}
+      {room && <Chat />}
     </div>
   );
 }
