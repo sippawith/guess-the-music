@@ -546,28 +546,7 @@ io.on("connection", (socket) => {
       room.currentTrackIndex = 0;
       room.hintsUsed = 0;
       
-      // Start countdown
-      room.state = "PLAYING";
-      room.countdown = 3;
-      
-      const countdownInterval = setInterval(() => {
-        if (!rooms[roomId]) {
-          clearInterval(countdownInterval);
-          return;
-        }
-        
-        rooms[roomId].countdown!--;
-        io.to(roomId).emit("countdown_tick", rooms[roomId].countdown);
-        
-        if (rooms[roomId].countdown === 0) {
-          clearInterval(countdownInterval);
-          delete rooms[roomId].countdown;
-          startRound(roomId);
-        }
-      }, 1000);
-      
-      io.to(roomId).emit("countdown_start", 3);
-      io.to(roomId).emit("room_update", getPublicRoom(room));
+      startRound(roomId);
     } catch (error: any) {
       console.error("Game Start Error:", error.response?.data || error.message);
       let errorMsg = error.response?.data?.error?.message || error.message;
@@ -662,8 +641,34 @@ io.on("connection", (socket) => {
     // Fallback timer start (in case players don't signal buffered)
     if (room.roundTimeout) clearTimeout(room.roundTimeout);
     room.roundTimeout = setTimeout(() => {
-      startTimer(roomId);
-    }, room.category === 'MUSIC' ? 5000 : 3000);
+      startCountdown(roomId);
+    }, room.category === 'MUSIC' ? 10000 : 5000);
+  }
+
+  function startCountdown(roomId: string) {
+    const room = rooms[roomId];
+    if (!room || room.state !== "PLAYING" || room.roundEndTime !== 0 || room.countdown !== undefined) return;
+
+    if (room.roundTimeout) clearTimeout(room.roundTimeout);
+    
+    room.countdown = 3;
+    io.to(roomId).emit("countdown_start", 3);
+    
+    const countdownInterval = setInterval(() => {
+      if (!rooms[roomId] || rooms[roomId].state !== "PLAYING") {
+        clearInterval(countdownInterval);
+        return;
+      }
+      
+      rooms[roomId].countdown!--;
+      io.to(roomId).emit("countdown_tick", rooms[roomId].countdown);
+      
+      if (rooms[roomId].countdown === 0) {
+        clearInterval(countdownInterval);
+        delete rooms[roomId].countdown;
+        startTimer(roomId);
+      }
+    }, 1000);
   }
 
   function startTimer(roomId: string) {
@@ -687,7 +692,7 @@ io.on("connection", (socket) => {
     room.bufferedPlayers.add(socket.id);
     const numPlayers = Object.keys(room.players).length;
     if (room.bufferedPlayers.size >= numPlayers) {
-      startTimer(roomId);
+      startCountdown(roomId);
     }
   });
 

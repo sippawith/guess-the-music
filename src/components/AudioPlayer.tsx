@@ -3,63 +3,64 @@ import { useGameStore } from '../store';
 import { Volume2 } from 'lucide-react';
 
 export function AudioPlayer() {
-  const { currentTrack, room, actions } = useGameStore();
+  const { currentTrack, room, isTimerStarted, actions } = useGameStore();
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
 
+  // Handle loading and signaling readiness
   useEffect(() => {
     if (currentTrack && audioRef.current) {
-      // Clear any pending stop timeout
       if (stopTimeoutRef.current) {
         clearTimeout(stopTimeoutRef.current);
         stopTimeoutRef.current = null;
       }
 
-      // Only change source if it's a new track
       if (currentTrack.previewUrl && audioRef.current.src !== currentTrack.previewUrl) {
         audioRef.current.src = currentTrack.previewUrl;
         audioRef.current.volume = 0.5;
-        audioRef.current.loop = false; // Reset loop for normal tracks
-        audioRef.current.play().then(() => {
-          setIsBlocked(false);
-        }).catch(e => {
-          console.error("Audio play failed:", e);
-          setIsBlocked(true);
-        });
+        audioRef.current.loop = false;
         
-        audioRef.current.onplay = () => {
+        // Signal ready when enough audio is buffered
+        audioRef.current.oncanplaythrough = () => {
           actions.trackPlaying();
         };
+        
+        // Fallback in case oncanplaythrough doesn't fire
+        setTimeout(() => {
+          actions.trackPlaying();
+        }, 8000);
       } else if (!currentTrack.previewUrl) {
-        // No audio for this track/category, play Kahoot lobby music
         const bgMusicUrl = "https://archive.org/download/KahootLobbyMusic/Kahoot%20Lobby%20Music%20%28HD%29.mp3";
-        if (audioRef.current) {
-          if (!audioRef.current.src.includes("Kahoot")) {
-            audioRef.current.src = bgMusicUrl;
-            audioRef.current.volume = 0.3; // Lower volume for background
-            audioRef.current.loop = true;
-            audioRef.current.play().then(() => {
-              setIsBlocked(false);
-            }).catch(e => {
-              console.error("Audio play failed:", e);
-              setIsBlocked(true);
-            });
-          } else if (audioRef.current.paused) {
-            // If it's already the right source but paused, play it
-            audioRef.current.play().catch(e => {
-              console.error("Audio play failed:", e);
-              setIsBlocked(true);
-            });
-          }
+        if (!audioRef.current.src.includes("Kahoot")) {
+          audioRef.current.src = bgMusicUrl;
+          audioRef.current.volume = 0.3;
+          audioRef.current.loop = true;
         }
-        setIsBlocked(false);
-        // We don't call trackPlaying here for non-music categories; 
-        // Game.tsx will handle it when the image actually loads to ensure synchronization.
+        // For non-music, Game.tsx handles signaling when image loads
       }
     }
+  }, [currentTrack, actions]);
 
-    // Handle stopping audio when leaving the room or returning to lobby
+  // Handle actual playback when timer starts
+  useEffect(() => {
+    if (isTimerStarted && audioRef.current && currentTrack) {
+      audioRef.current.play().then(() => {
+        setIsBlocked(false);
+      }).catch(e => {
+        console.error("Audio play failed:", e);
+        setIsBlocked(true);
+      });
+    } else if (!isTimerStarted && room?.state === 'PLAYING') {
+      // Pause audio during countdown or before timer starts
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    }
+  }, [isTimerStarted, currentTrack, room?.state]);
+
+  // Handle stopping audio
+  useEffect(() => {
     if ((!room || room.state === 'LOBBY') && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";

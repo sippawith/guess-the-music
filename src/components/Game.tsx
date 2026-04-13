@@ -238,13 +238,15 @@ export function Game() {
                   type="text"
                   value={guess}
                   onChange={(e) => setGuess(e.target.value)}
-                  placeholder={t.typeGuess}
-                  className="flex-grow bg-vox-white border-4 border-vox-black px-4 py-3 font-black text-base focus:outline-none focus:ring-0 placeholder:opacity-30 dark:text-vox-black"
+                  placeholder={!isTimerStarted ? "Wait for countdown..." : t.typeGuess}
+                  disabled={!isTimerStarted}
+                  className="flex-grow bg-vox-white border-4 border-vox-black px-4 py-3 font-black text-base focus:outline-none focus:ring-0 placeholder:opacity-30 dark:text-vox-black disabled:opacity-50 disabled:bg-gray-200"
                   autoFocus
                 />
                 <button 
                   type="submit"
-                  className="vox-button px-6 bg-vox-black text-vox-white hover:bg-vox-white hover:text-vox-black transition-all"
+                  disabled={!isTimerStarted}
+                  className="vox-button px-6 bg-vox-black text-vox-white hover:bg-vox-white hover:text-vox-black transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send size={20} />
                 </button>
@@ -264,12 +266,13 @@ export function Game() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8, filter: "blur(10px)" }}
                         transition={{ delay: i * 0.05 }}
+                        disabled={!isTimerStarted}
                         onClick={() => {
                           actions.submitGuess(choice);
                           setLocalGuess(choice);
                           setHasGuessedThisRound(true);
                         }}
-                        className={`vox-button py-2.5 text-xs font-black px-4 bg-vox-white hover:bg-vox-black hover:text-vox-white transition-all ${localGuess === choice ? 'selected' : ''}`}
+                        className={`vox-button py-2.5 text-xs font-black px-4 bg-vox-white hover:bg-vox-black hover:text-vox-white transition-all ${localGuess === choice ? 'selected' : ''} disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-vox-white disabled:hover:text-vox-black`}
                       >
                         <span className="block truncate w-full">{choice}</span>
                       </motion.button>
@@ -297,7 +300,7 @@ export function Game() {
                 icon={<Lightbulb size={24} />}
                 label={t.reveal}
                 count={me.abilities.hint}
-                disabled={me.abilities.hint <= 0 || hasGuessedThisRound || !room.settings.abilitiesEnabled}
+                disabled={!isTimerStarted || me.abilities.hint <= 0 || hasGuessedThisRound || !room.settings.abilitiesEnabled}
                 onClick={() => actions.useAbility('hint')}
                 description={t.revealDesc}
               />
@@ -305,7 +308,7 @@ export function Game() {
                 icon={<Scissors size={24} />}
                 label={t.fiftyFifty}
                 count={me.abilities.removeWrong}
-                disabled={me.abilities.removeWrong <= 0 || hasGuessedThisRound || !room.settings.gameMode.startsWith('CHOICE') || !room.settings.abilitiesEnabled}
+                disabled={!isTimerStarted || me.abilities.removeWrong <= 0 || hasGuessedThisRound || !room.settings.gameMode.startsWith('CHOICE') || !room.settings.abilitiesEnabled}
                 onClick={() => actions.useAbility('removeWrong')}
                 description={t.fiftyFiftyDesc}
               />
@@ -313,7 +316,7 @@ export function Game() {
                 icon={<Snowflake size={24} />}
                 label={t.freeze}
                 count={me.abilities.freeze}
-                disabled={me.abilities.freeze <= 0 || hasGuessedThisRound || currentTrack.isFrozen || !room.settings.abilitiesEnabled}
+                disabled={!isTimerStarted || me.abilities.freeze <= 0 || hasGuessedThisRound || currentTrack.isFrozen || !room.settings.abilitiesEnabled}
                 onClick={() => actions.useAbility('freeze')}
                 description={t.freezeDesc}
               />
