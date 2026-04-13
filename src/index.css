@@ -89,7 +89,7 @@ body {
 }
 
 .vox-title {
-  @apply font-serif italic font-black leading-none tracking-tighter;
+  @apply font-serif italic font-black leading-tight tracking-tighter;
 }
 
 .handwritten {

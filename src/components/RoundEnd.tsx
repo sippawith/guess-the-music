@@ -145,10 +145,10 @@ export function RoundEnd() {
                     </button>
                   </div>
                   
-                  <h3 className="vox-title text-4xl md:text-5xl mb-2 leading-none text-vox-black line-clamp-2">
+                  <h3 className="vox-title text-4xl md:text-5xl mb-2 leading-tight text-vox-black">
                     {track.name}
                   </h3>
-                  <p className="font-serif italic text-xl text-vox-black/60 mb-6 line-clamp-1">
+                  <p className="font-serif italic text-xl text-vox-black/60 mb-6 line-clamp-2">
                     {track.artist}
                   </p>
 
@@ -205,7 +205,7 @@ export function RoundEnd() {
                           {index + 1}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-black text-lg leading-none text-vox-black truncate">{p.name}</p>
+                          <p className="font-black text-lg leading-tight text-vox-black truncate">{p.name}</p>
                           {p.streak >= 3 && (
                             <div className="flex items-center gap-1 mt-1">
                               <Flame size={12} className="text-vox-red" fill="currentColor" />
@@ -215,7 +215,7 @@ export function RoundEnd() {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0 ml-4">
-                        <p className="font-black text-2xl leading-none text-vox-black">{p.score}</p>
+                        <p className="font-black text-2xl leading-tight text-vox-black">{p.score}</p>
                         {gain > 0 && (
                           <p className="text-[10px] font-black text-vox-red mt-1">+{gain} PTS</p>
                         )}

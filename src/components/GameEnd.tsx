@@ -59,7 +59,7 @@ export function GameEnd() {
         </motion.div>
         <div className="flex flex-col items-center">
           <span className="handwritten text-xl mb-1 -rotate-2 text-vox-black">{t.finalStandings}</span>
-          <h1 className="vox-title text-5xl md:text-7xl leading-none mb-2 text-vox-black">
+          <h1 className="vox-title text-5xl md:text-7xl leading-tight mb-2 text-vox-black">
             {t.victory.split(' ')[0]} <span className="bg-vox-yellow px-4 italic text-black">{t.achieved}</span>
           </h1>
         </div>

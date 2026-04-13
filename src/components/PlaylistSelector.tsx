@@ -6,14 +6,12 @@ import { useGameStore } from '../store';
 import { translations } from '../translations';
 
 export function PlaylistSelector() {
-  const { room, actions, userToken, selectedPlaylist } = useGameStore();
+  const { room, actions, userToken, selectedPlaylist, playlistTracks, selectedLanguages } = useGameStore();
   const t = translations.en;
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [detectedLanguages, setDetectedLanguages] = useState<string[]>([]);
-  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [isDetectingLanguages, setIsDetectingLanguages] = useState(false);
 
   useEffect(() => {
@@ -25,7 +23,7 @@ export function PlaylistSelector() {
   const fetchPlaylistTracks = async () => {
     if (!selectedPlaylist) return;
     setIsDetectingLanguages(true);
-    setPlaylistTracks([]);
+    actions.setPlaylistTracks([]);
     try {
       let allItems: any[] = [];
       let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${selectedPlaylist.id}/tracks?limit=100`;
@@ -58,7 +56,7 @@ export function PlaylistSelector() {
           artist: item.track.artists?.map((a: any) => a.name).join(", ") || "Unknown Artist"
         }));
 
-      setPlaylistTracks(tracks);
+      actions.setPlaylistTracks(tracks);
       detectLanguages(tracks);
     } catch (err) {
       console.error("Failed to fetch tracks via API, falling back to scraper:", err);
@@ -68,7 +66,7 @@ export function PlaylistSelector() {
           playlistId: selectedPlaylist.id 
         });
         if (res.data.tracks) {
-          setPlaylistTracks(res.data.tracks);
+          actions.setPlaylistTracks(res.data.tracks);
           detectLanguages(res.data.tracks);
         }
       } catch (fallbackErr) {
@@ -82,12 +80,11 @@ export function PlaylistSelector() {
   const detectLanguages = (tracks: any[]) => {
     if (!tracks || tracks.length === 0) {
       setDetectedLanguages(["English"]);
-      setSelectedLanguages(["English"]);
+      actions.setSelectedLanguages(["English"]);
       return;
     }
 
     const languages = new Set<string>();
-    languages.add("English");
 
     const thaiRegex = /[\u0E00-\u0E7F]/;
     const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
@@ -96,15 +93,18 @@ export function PlaylistSelector() {
 
     tracks.forEach(track => {
       const text = ((track.name || "") + " " + (track.artist || ""));
-      if (thaiRegex.test(text)) languages.add("Thai");
-      if (japaneseRegex.test(text)) languages.add("Japanese");
-      if (koreanRegex.test(text)) languages.add("Korean");
-      if (chineseRegex.test(text)) languages.add("Chinese");
+      let trackLang = "English";
+      if (thaiRegex.test(text)) trackLang = "Thai";
+      else if (japaneseRegex.test(text)) trackLang = "Japanese";
+      else if (koreanRegex.test(text)) trackLang = "Korean";
+      else if (chineseRegex.test(text)) trackLang = "Chinese";
+      
+      languages.add(trackLang);
     });
 
     const langs = Array.from(languages);
     setDetectedLanguages(langs);
-    setSelectedLanguages(langs);
+    actions.setSelectedLanguages(langs);
   };
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -247,9 +247,9 @@ export function PlaylistSelector() {
                 <button 
                   onClick={() => {
                     actions.setSelectedPlaylist(null);
-                    setPlaylistTracks([]);
+                    actions.setPlaylistTracks([]);
                     setDetectedLanguages([]);
-                    setSelectedLanguages([]);
+                    actions.setSelectedLanguages([]);
                   }}
                   className="text-vox-red font-black text-xs uppercase tracking-widest hover:underline"
                 >
@@ -280,10 +280,10 @@ export function PlaylistSelector() {
                     onClick={() => {
                       if (selectedLanguages.includes(lang)) {
                         if (selectedLanguages.length > 1) {
-                          setSelectedLanguages(prev => prev.filter(l => l !== lang));
+                          actions.setSelectedLanguages(selectedLanguages.filter(l => l !== lang));
                         }
                       } else {
-                        setSelectedLanguages(prev => [...prev, lang]);
+                        actions.setSelectedLanguages([...selectedLanguages, lang]);
                       }
                     }}
                     className={`vox-button py-2 px-6 text-[10px] font-black uppercase tracking-widest ${selectedLanguages.includes(lang) ? 'selected bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}

@@ -76,6 +76,8 @@ interface GameState {
   userToken: string | null;
   
   selectedPlaylist: { id: string, name: string, image: string, url?: string } | null;
+  playlistTracks: any[];
+  selectedLanguages: string[];
   
   // Round specific
   currentTrack: { 
@@ -119,6 +121,8 @@ interface GameState {
 
   actions: {
     setSelectedPlaylist: (playlist: { id: string, name: string, image: string, url?: string } | null) => void;
+    setPlaylistTracks: (tracks: any[]) => void;
+    setSelectedLanguages: (languages: string[]) => void;
     setTheme: (theme: 'light' | 'dark') => void;
     toggleTheme: () => void;
     setUserToken: (token: string) => void;
@@ -161,6 +165,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   userToken: null,
   
   selectedPlaylist: null,
+  playlistTracks: [],
+  selectedLanguages: [],
   
   currentTrack: null,
   roundStartTime: 0,
@@ -182,6 +188,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   actions: {
     setSelectedPlaylist: (playlist) => set({ selectedPlaylist: playlist }),
+    setPlaylistTracks: (tracks) => set({ playlistTracks: tracks }),
+    setSelectedLanguages: (languages) => set({ selectedLanguages: languages }),
     setTheme: (theme) => set({ theme }),
     toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
     setUserToken: (token: string) => set({ userToken: token }),
@@ -217,9 +225,11 @@ export const useGameStore = create<GameState>((set, get) => ({
           lastRoundResult: null,
           intermissionEndTime: null,
           intermissionDuration: null,
-          countdown: null,
           gameStatus: null
         });
+        setTimeout(() => {
+          set({ countdown: null });
+        }, 1000);
       });
 
       socket.on('hint_revealed', (data) => {

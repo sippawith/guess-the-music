@@ -11,7 +11,7 @@ import { PlaylistSelector } from './PlaylistSelector';
 import { CategorySettings } from './CategorySettings';
 
 export function Lobby() {
-  const { room, socket, actions, gameStatus, selectedPlaylist } = useGameStore();
+  const { room, socket, actions, gameStatus, selectedPlaylist, playlistTracks, selectedLanguages } = useGameStore();
   const t = translations.en;
   const [copied, setCopied] = useState(false);
 
@@ -39,7 +39,38 @@ export function Lobby() {
     }
 
     if (!selectedPlaylist) return;
-    actions.startGame(selectedPlaylist.id, undefined, undefined);
+    
+    let trackIds: string[] | undefined = undefined;
+    
+    // If we have loaded tracks and selected languages, filter them
+    if (playlistTracks.length > 0 && selectedLanguages.length > 0) {
+      const thaiRegex = /[\u0E00-\u0E7F]/;
+      const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
+      const koreanRegex = /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uD7B0-\uD7FF]/;
+      const chineseRegex = /[\u4E00-\u9FFF]/;
+
+      const filteredTracks = playlistTracks.filter(track => {
+        const text = ((track.name || "") + " " + (track.artist || ""));
+        
+        // Determine the track's language
+        let trackLang = "English"; // Default
+        if (thaiRegex.test(text)) trackLang = "Thai";
+        else if (japaneseRegex.test(text)) trackLang = "Japanese";
+        else if (koreanRegex.test(text)) trackLang = "Korean";
+        else if (chineseRegex.test(text)) trackLang = "Chinese";
+
+        return selectedLanguages.includes(trackLang);
+      });
+      
+      trackIds = filteredTracks.map(t => t.id);
+      
+      // If filtering resulted in 0 tracks, fallback to all tracks to avoid breaking the game
+      if (trackIds.length === 0) {
+        trackIds = undefined;
+      }
+    }
+
+    actions.startGame(selectedPlaylist.id, trackIds, undefined);
   };
 
   const canStart = isNonMusicCategory

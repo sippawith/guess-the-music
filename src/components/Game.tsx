@@ -25,23 +25,12 @@ export function Game() {
   const [showStreak, setShowStreak] = useState(false);
   const [lastStreak, setLastStreak] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const me = room?.players[socket?.id || ''];
   const currentRound = (room?.currentTrackIndex || 0) + 1;
   const totalRounds = room?.tracks.length || 10;
   const isVisualCategory = room?.category !== 'MUSIC';
   const CategoryIcon = CATEGORY_ICONS[room?.category || 'MUSIC'] || Music;
-
-  useEffect(() => {
-    if (room?.countdown && room.countdown > 0) {
-      if (!countdownAudioRef.current) {
-        countdownAudioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
-      }
-      countdownAudioRef.current.currentTime = 0;
-      countdownAudioRef.current.play().catch(() => {});
-    }
-  }, [room?.countdown]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -128,27 +117,6 @@ export function Game() {
       >
         <ArrowLeft size={20} />
       </button>
-
-      <AnimatePresence>
-        {room.countdown && room.countdown > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-vox-paper/90 backdrop-blur-xl"
-          >
-            <motion.div
-              key={room.countdown}
-              initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
-              animate={{ scale: 1, opacity: 1, rotate: 0 }}
-              exit={{ scale: 1.5, opacity: 0, rotate: 20 }}
-              className="vox-title text-[15rem] text-vox-black"
-            >
-              {room.countdown}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-4">
