@@ -32,13 +32,16 @@ export function RoundEnd() {
 
   return (
     <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 1.05 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
       className="w-full max-w-7xl px-4 py-4"
     >
       <button 
         onClick={() => actions.leaveRoom()}
         className="fixed top-6 left-6 p-3 rounded-2xl bg-vox-white border-2 border-vox-black shadow-vox text-vox-black hover:bg-vox-yellow transition-all z-50"
+        title="Leave Game"
       >
         <ArrowLeft size={20} />
       </button>
@@ -50,6 +53,9 @@ export function RoundEnd() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="handwritten text-lg -rotate-3 block text-vox-black">{t.roundResults}</span>
+                <span className="bg-vox-black text-vox-white px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ml-2">
+                  {t.round} {room?.currentTrackIndex !== undefined ? room.currentTrackIndex + 1 : 0}/{room?.tracks.length || 0}
+                </span>
               </div>
               <h1 className="vox-title text-5xl md:text-7xl text-vox-black">
                 {t.data.split(' ')[0]} <span className="bg-vox-yellow px-4 text-black">{t.revealed}</span>
@@ -198,8 +204,8 @@ export function RoundEnd() {
                         <div className={`w-10 h-10 border-2 border-vox-black flex items-center justify-center font-black text-lg ${isCorrect ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}>
                           {index + 1}
                         </div>
-                        <div>
-                          <p className="font-black text-lg leading-none text-vox-black">{p.name}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-lg leading-none text-vox-black truncate">{p.name}</p>
                           {p.streak >= 3 && (
                             <div className="flex items-center gap-1 mt-1">
                               <Flame size={12} className="text-vox-red" fill="currentColor" />
@@ -208,7 +214,7 @@ export function RoundEnd() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex-shrink-0 ml-4">
                         <p className="font-black text-2xl leading-none text-vox-black">{p.score}</p>
                         {gain > 0 && (
                           <p className="text-[10px] font-black text-vox-red mt-1">+{gain} PTS</p>

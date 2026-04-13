@@ -98,7 +98,20 @@ export function Game() {
   };
 
   return (
-    <div className="w-full max-w-5xl px-4 py-2 flex flex-col min-h-screen">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="w-full max-w-5xl px-4 py-2 flex flex-col min-h-screen relative"
+    >
+      <button 
+        onClick={() => actions.leaveRoom()}
+        className="fixed top-6 left-6 p-3 rounded-2xl bg-vox-white border-2 border-vox-black shadow-vox text-vox-black hover:bg-vox-yellow transition-all z-50"
+        title="Leave Game"
+      >
+        <ArrowLeft size={20} />
+      </button>
+
       <AnimatePresence>
         {room.countdown && room.countdown > 0 && (
           <motion.div
@@ -132,6 +145,18 @@ export function Game() {
         </div>
 
         <div className="flex items-center gap-4">
+          {currentTrack.isFrozen && (
+            <div className="bg-blue-100 border-2 border-blue-400 px-3 py-1 flex items-center gap-2 animate-pulse">
+              <Snowflake size={16} className="text-blue-500 animate-spin-slow" />
+              <span className="font-black text-blue-500 text-xs uppercase tracking-widest">{t.timeFrozen}</span>
+            </div>
+          )}
+          {showStreak && (
+            <div className="bg-vox-yellow border-2 border-vox-black px-3 py-1 flex items-center gap-2 animate-bounce">
+              <Flame size={16} className="text-vox-red" fill="currentColor" />
+              <span className="font-black text-vox-black text-xs uppercase tracking-widest">{t.onFire}</span>
+            </div>
+          )}
           <div className="text-right">
             <p className="text-[10px] font-black uppercase tracking-widest opacity-40">{t.yourScore}</p>
             <p className="text-2xl font-black leading-none dark:text-vox-black">{me.score}</p>
@@ -249,7 +274,7 @@ export function Game() {
                         }}
                         className={`vox-button py-2.5 text-xs font-black px-4 bg-vox-white hover:bg-vox-black hover:text-vox-white transition-all ${localGuess === choice ? 'selected' : ''}`}
                       >
-                        <span className="line-clamp-1">{choice}</span>
+                        <span className="block truncate w-full">{choice}</span>
                       </motion.button>
                     );
                   })}
@@ -311,43 +336,7 @@ export function Game() {
         </div>
       </div>
 
-      {/* Streak Notification */}
-      <AnimatePresence>
-        {showStreak && (
-          <motion.div
-            initial={{ scale: 0.5, opacity: 0, x: 100 }}
-            animate={{ scale: 1, opacity: 1, x: 0 }}
-            exit={{ scale: 1.5, opacity: 0 }}
-            className="fixed bottom-10 right-10 pointer-events-none z-[110]"
-          >
-            <div className="vox-card bg-vox-yellow p-6 rotate-3 shadow-vox-lg border-4 border-vox-black">
-              <div className="flex flex-col items-center">
-                <Flame size={40} className="text-vox-red mb-2 animate-bounce" fill="currentColor" />
-                <h2 className="vox-title text-3xl mb-1 text-black">{t.onFire}</h2>
-                <p className="text-xl font-black uppercase tracking-widest text-black">{me.streak} {t.roundStreak}</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Freeze Overlay */}
-      <AnimatePresence>
-        {currentTrack.isFrozen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-blue-500/10 pointer-events-none z-[120] flex items-center justify-center"
-          >
-            <div className="vox-card bg-vox-white/90 backdrop-blur-sm p-4 flex items-center gap-3 border-4 border-blue-400 shadow-lg -rotate-2">
-              <Snowflake size={24} className="text-blue-500 animate-spin-slow" />
-              <span className="font-black text-blue-500 uppercase tracking-widest">{t.timeFrozen}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 
@@ -368,18 +357,18 @@ function AbilityButton({ icon, label, count, disabled, onClick, description }: a
           : `bg-vox-white hover:bg-vox-yellow hover:shadow-vox ${isPressed ? 'translate-x-[4px] translate-y-[4px] shadow-none scale-[0.98] bg-vox-yellow/80' : ''}`
       }`}
     >
-      <div className="flex items-center gap-4">
-        <div className={`p-2 border-2 border-vox-black ${disabled ? 'bg-vox-paper' : 'bg-vox-paper group-hover:bg-vox-white'}`}>
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className={`p-2 border-2 border-vox-black flex-shrink-0 ${disabled ? 'bg-vox-paper' : 'bg-vox-paper group-hover:bg-vox-white'}`}>
           {icon}
         </div>
-        <div className="text-left">
+        <div className="text-left flex-1 min-w-0">
           <div className="flex items-baseline gap-2">
-            <p className="font-black text-sm uppercase tracking-tighter leading-none text-vox-black">{label}</p>
+            <p className="font-black text-sm uppercase tracking-tighter leading-none text-vox-black truncate">{label}</p>
           </div>
-          <p className="text-[10px] font-medium opacity-40 leading-none mt-1 text-vox-black">{description}</p>
+          <p className="text-[10px] font-medium opacity-40 leading-none mt-1 text-vox-black truncate">{description}</p>
         </div>
       </div>
-      <div className="text-right">
+      <div className="text-right flex-shrink-0 ml-2">
         <p className="text-[10px] font-black uppercase tracking-widest opacity-40 text-vox-black">Uses</p>
         <p className="font-black text-sm text-vox-black">{count}</p>
       </div>

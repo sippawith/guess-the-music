@@ -75,6 +75,8 @@ interface GameState {
   
   userToken: string | null;
   
+  selectedPlaylist: { id: string, name: string, image: string, url?: string } | null;
+  
   // Round specific
   currentTrack: { 
     previewUrl?: string; 
@@ -115,6 +117,7 @@ interface GameState {
   theme: 'light' | 'dark';
 
   actions: {
+    setSelectedPlaylist: (playlist: { id: string, name: string, image: string, url?: string } | null) => void;
     setTheme: (theme: 'light' | 'dark') => void;
     toggleTheme: () => void;
     setUserToken: (token: string) => void;
@@ -155,6 +158,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   userToken: null,
   
+  selectedPlaylist: null,
+  
   currentTrack: null,
   roundStartTime: 0,
   roundEndTime: 0,
@@ -172,6 +177,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   theme: 'light',
 
   actions: {
+    setSelectedPlaylist: (playlist) => set({ selectedPlaylist: playlist }),
     setTheme: (theme) => set({ theme }),
     toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
     setUserToken: (token: string) => set({ userToken: token }),

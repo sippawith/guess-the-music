@@ -66,14 +66,13 @@ function SettingInput({ label, icon: Icon, value, min, max, onChange }: {
 }
 
 export function Lobby() {
-  const { room, socket, actions, gameStatus, userToken } = useGameStore();
+  const { room, socket, actions, gameStatus, userToken, selectedPlaylist } = useGameStore();
   const t = translations.en;
   const [copied, setCopied] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isGeneratingClues, setIsGeneratingClues] = useState(false);
-  const [selectedPlaylist, setSelectedPlaylist] = useState<{ id: string, name: string, image: string, url?: string } | null>(null);
   const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [detectedLanguages, setDetectedLanguages] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
@@ -293,16 +292,16 @@ export function Lobby() {
       const playlistId = spotifyMatch[1];
       try {
         const res = await axios.post('/api/playlist/details', { playlistId, url });
-        setSelectedPlaylist({ id: res.data.id, name: res.data.name, image: res.data.images[0]?.url || "", url });
+        actions.setSelectedPlaylist({ id: res.data.id, name: res.data.name, image: res.data.images[0]?.url || "", url });
       } catch (err) {
-        setSelectedPlaylist({ id: playlistId, name: "Spotify Playlist", image: "", url });
+        actions.setSelectedPlaylist({ id: playlistId, name: "Spotify Playlist", image: "", url });
       }
     } else if (appleMatch) {
       try {
         const res = await axios.post('/api/playlist/details', { url });
-        setSelectedPlaylist({ id: res.data.id, name: res.data.name, image: res.data.images[0]?.url || "", url });
+        actions.setSelectedPlaylist({ id: res.data.id, name: res.data.name, image: res.data.images[0]?.url || "", url });
       } catch (err) {
-        setSelectedPlaylist({ id: url, name: "Apple Music Playlist", image: "", url });
+        actions.setSelectedPlaylist({ id: url, name: "Apple Music Playlist", image: "", url });
       }
     }
   };
@@ -569,7 +568,7 @@ export function Lobby() {
                               animate={{ opacity: 1, x: 0 }}
                               key={pl.id}
                               onClick={() => {
-                                setSelectedPlaylist({ id: pl.id, name: pl.name, image: pl.images[0]?.url, url: pl.url });
+                                actions.setSelectedPlaylist({ id: pl.id, name: pl.name, image: pl.images[0]?.url, url: pl.url });
                                 setSearchResults([]);
                               }}
                               className="flex items-center gap-4 bg-vox-white border-2 border-vox-black p-4 cursor-pointer hover:bg-vox-yellow transition-all group text-vox-black"
@@ -608,12 +607,12 @@ export function Lobby() {
                           </div>
                           <div className="text-center md:text-left flex-grow">
                             <span className="bg-vox-black text-vox-white px-3 py-1 text-[10px] font-black uppercase tracking-widest mb-4 inline-block">{t.activeLibrary}</span>
-                            <h4 className="vox-title text-4xl mb-2 text-vox-black">{selectedPlaylist.name}</h4>
+                            <h4 className="vox-title text-4xl mb-2 text-vox-black line-clamp-2">{selectedPlaylist.name}</h4>
                             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
                               <p className="handwritten text-xl opacity-60 text-vox-black">{playlistTracks.length} {t.tracksDetected}</p>
                               <button 
                                 onClick={() => {
-                                  setSelectedPlaylist(null);
+                                  actions.setSelectedPlaylist(null);
                                   setPlaylistTracks([]);
                                   setDetectedLanguages([]);
                                   setSelectedLanguages([]);
