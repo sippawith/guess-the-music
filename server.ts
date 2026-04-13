@@ -294,7 +294,7 @@ function getTMDBHeaders(): Record<string, string> | null {
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' };
 }
 
-async function fetchTMDBDiscover(type: 'movie' | 'tv', params: Record<string, string>): Promise<any[]> {
+async function fetchTMDBDiscover(type: 'movie' | 'tv', params: Record<string, string>, language: string = 'en-US'): Promise<any[]> {
   const headers = getTMDBHeaders();
   if (!headers) return [];
   
@@ -304,7 +304,7 @@ async function fetchTMDBDiscover(type: 'movie' | 'tv', params: Record<string, st
       const queryParams = new URLSearchParams({
         ...params,
         page: page.toString(),
-        language: 'en-US'
+        language
       });
       if (!params.sort_by) queryParams.set('sort_by', 'popularity.desc');
       if (!params['vote_count.gte']) queryParams.set('vote_count.gte', '50');
@@ -355,9 +355,11 @@ function tmdbToTrack(item: any, type: 'movie' | 'tv'): Track {
 async function fetchMoviesFromTMDB(genre: string): Promise<Track[]> {
   console.log(`[TMDB] Fetching movies for genre: ${genre}`);
   const params: Record<string, string> = {};
+  let language = 'en-US';
   
   if (genre === 'Thai Movies') {
     params.with_original_language = 'th';
+    language = 'th-TH';
   } else if (genre === 'Classic') {
     params['primary_release_date.lte'] = '2000-12-31';
     params.sort_by = 'vote_count.desc';
@@ -366,7 +368,7 @@ async function fetchMoviesFromTMDB(genre: string): Promise<Track[]> {
     if (genreIds) params.with_genres = genreIds;
   }
   
-  const results = await fetchTMDBDiscover('movie', params);
+  const results = await fetchTMDBDiscover('movie', params, language);
   const tracks = results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
   console.log(`[TMDB] Found ${tracks.length} movies for genre: ${genre}`);
   return tracks;
@@ -381,6 +383,19 @@ async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
       with_companies: '2|3'
     });
     return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
+  }
+
+  if (source === 'Disney Princess') {
+    const princessTitles = [
+      'Snow White and the Seven Dwarfs', 'Cinderella', 'Sleeping Beauty', 
+      'The Little Mermaid', 'Beauty and the Beast', 'Aladdin', 
+      'Pocahontas', 'Mulan', 'The Princess and the Frog', 
+      'Tangled', 'Brave', 'Frozen', 'Moana', 'Raya and the Last Dragon'
+    ];
+    const results = await Promise.all(princessTitles.map(name => searchTMDB(name, 'movie')));
+    return results
+      .filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path)
+      .map(r => tmdbToTrack(r, 'movie'));
   }
   
   if (source === 'Anime') {
@@ -435,11 +450,7 @@ async function fetchLandmarkImage(name: string): Promise<string> {
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`,
       { headers: { 'User-Agent': 'GuessTheMusic/1.0' }, timeout: 5000 }
     );
-    const thumb = res.data.thumbnail?.source;
-    if (thumb) {
-      // Upscale thumbnail to larger size
-      return thumb.replace(/\/\d+px-/, '/800px-');
-    }
+    return res.data.originalimage?.source || res.data.thumbnail?.source || '';
   } catch (error: any) {
     console.error(`[Landmarks] Failed to fetch image for: ${name}`, error.message);
   }

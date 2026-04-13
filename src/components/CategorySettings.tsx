@@ -42,7 +42,7 @@ export function CategorySettings() {
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {['Disney/Pixar', 'Cartoon Network', 'Nickelodeon', 'Anime', 'Classic 90s'].map(source => (
+          {['Disney/Pixar', 'Disney Princess', 'Cartoon Network', 'Nickelodeon', 'Anime', 'Classic 90s'].map(source => (
             <button
               key={source}
               onClick={() => actions.updateSettings({ cartoonSource: source })}
