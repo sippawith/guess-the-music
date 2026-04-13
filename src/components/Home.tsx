@@ -91,10 +91,17 @@ export function Home() {
                   />
                   <button
                     onClick={() => {
+                      if (!playerName.trim()) {
+                        actions.setError("Please enter your name first!");
+                        return;
+                      }
+                      if (joinCode.length < 6) {
+                        actions.setError("Please enter a valid 6-character code!");
+                        return;
+                      }
                       unlockAudio();
                       actions.joinRoom(joinCode);
                     }}
-                    disabled={!playerName.trim() || joinCode.length < 6}
                     className="vox-button px-8 py-3"
                   >
                     {t.join}
@@ -106,10 +113,13 @@ export function Home() {
 
           <button
             onClick={() => {
+              if (!playerName.trim()) {
+                actions.setError("Please enter your name first!");
+                return;
+              }
               unlockAudio();
               setShowCreate(true);
             }}
-            disabled={!playerName.trim()}
             className="w-full vox-button py-8 text-2xl flex items-center justify-center gap-4 group"
           >
             <Play size={28} fill="currentColor" />

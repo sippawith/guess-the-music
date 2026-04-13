@@ -25,6 +25,15 @@ export default function App() {
     }
   }, [theme]);
 
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        actions.clearError();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, actions]);
+
   return (
     <div className="min-h-screen transition-colors duration-300">
       <AudioPlayer />

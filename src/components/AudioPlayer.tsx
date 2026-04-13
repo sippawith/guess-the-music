@@ -20,6 +20,7 @@ export function AudioPlayer() {
       if (currentTrack.previewUrl && audioRef.current.src !== currentTrack.previewUrl) {
         audioRef.current.src = currentTrack.previewUrl;
         audioRef.current.volume = 0.5;
+        audioRef.current.loop = false; // Reset loop for normal tracks
         audioRef.current.play().then(() => {
           setIsBlocked(false);
         }).catch(e => {
@@ -31,10 +32,26 @@ export function AudioPlayer() {
           actions.trackPlaying();
         };
       } else if (!currentTrack.previewUrl) {
-        // No audio for this track/category
+        // No audio for this track/category, play Kahoot-like background music
+        const bgMusicUrl = "https://upload.wikimedia.org/wikipedia/commons/3/34/Kevin_MacLeod_-_Monkeys_Spinning_Monkeys.ogg";
         if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.src = "";
+          if (!audioRef.current.src.includes("Monkeys_Spinning_Monkeys")) {
+            audioRef.current.src = bgMusicUrl;
+            audioRef.current.volume = 0.3; // Lower volume for background
+            audioRef.current.loop = true;
+            audioRef.current.play().then(() => {
+              setIsBlocked(false);
+            }).catch(e => {
+              console.error("Audio play failed:", e);
+              setIsBlocked(true);
+            });
+          } else if (audioRef.current.paused) {
+            // If it's already the right source but paused, play it
+            audioRef.current.play().catch(e => {
+              console.error("Audio play failed:", e);
+              setIsBlocked(true);
+            });
+          }
         }
         setIsBlocked(false);
         // We don't call trackPlaying here for non-music categories; 
@@ -42,8 +59,8 @@ export function AudioPlayer() {
       }
     }
 
-    // Handle stopping audio when leaving the room
-    if (!room && audioRef.current) {
+    // Handle stopping audio when leaving the room or returning to lobby
+    if ((!room || room.state === 'LOBBY') && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
     }

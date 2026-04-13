@@ -149,6 +149,7 @@ interface GameState {
     submitGuess: (guess: string) => void;
     useAbility: (ability: 'hint' | 'removeWrong' | 'freeze') => void;
     leaveRoom: () => void;
+    setError: (error: string) => void;
     clearError: () => void;
     trackPlaying: () => void;
     likeTrack: (track: LikedTrack) => void;
@@ -395,6 +396,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({ roomId: null, room: null, gameStatus: null, currentTrack: null, viewingLobby: false, chatMessages: [] });
     },
     
+    setError: (error: string) => set({ error }),
     clearError: () => set({ error: null }),
 
     trackPlaying: () => {
