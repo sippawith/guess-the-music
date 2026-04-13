@@ -1,6 +1,6 @@
 export const translations = {
   en: {
-    title: "GUESS THE MUSIC",
+    title: "GUESS YED MAE",
     subtitle: "The Ultimate",
     edition: "Editorial Edition № 01",
     identity: "Identity",
