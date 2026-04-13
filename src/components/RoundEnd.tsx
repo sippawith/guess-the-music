@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store';
 import { motion, AnimatePresence } from 'motion/react';
-import { translations } from '../translations';
+import { getTranslation } from '../translations';
 import { 
   CheckCircle2, XCircle, Trophy, Music, Clock, 
   Globe, ArrowLeft, Heart, Flame, Sparkles, TrendingUp
@@ -11,7 +11,7 @@ import { playSound } from '../utils/sounds';
 
 export function RoundEnd() {
   const { lastRoundResult, intermissionEndTime, intermissionDuration, room, actions, likedTracks, language, socket } = useGameStore();
-  const t = translations[language];
+  const t = getTranslation(language);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {

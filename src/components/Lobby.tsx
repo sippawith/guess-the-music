@@ -5,7 +5,7 @@ import {
   ArrowLeft, Disc3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { translations } from '../translations';
+import { getTranslation } from '../translations';
 import { GameSettings } from './GameSettings';
 import { PlaylistSelector } from './PlaylistSelector';
 import { CategorySettings } from './CategorySettings';
@@ -13,7 +13,7 @@ import { playSound } from '../utils/sounds';
 
 export function Lobby() {
   const { room, socket, actions, gameStatus, selectedPlaylist, language } = useGameStore();
-  const t = translations[language];
+  const t = getTranslation(language);
   const [copied, setCopied] = useState(false);
 
   if (!room || !socket) return null;
