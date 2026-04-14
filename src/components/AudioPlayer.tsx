@@ -77,14 +77,21 @@ export function AudioPlayer() {
 
   // 2. Handle actually playing the audio when the timer starts
   useEffect(() => {
+    let isMounted = true;
     if (isTimerStarted && audioRef.current && currentTrack) {
-      audioRef.current.play().then(() => {
-        actions.setAudioBlocked(false);
-      }).catch(e => {
-        console.error("Audio play failed:", e);
-        actions.setAudioBlocked(true);
-      });
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          if (isMounted) actions.setAudioBlocked(false);
+        }).catch(e => {
+          if (e.name !== 'AbortError') {
+            console.error("Audio play failed:", e);
+            if (isMounted) actions.setAudioBlocked(true);
+          }
+        });
+      }
     }
+    return () => { isMounted = false; };
   }, [isTimerStarted, currentTrack, actions]);
 
   const handleUnblock = () => {

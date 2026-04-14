@@ -533,7 +533,7 @@ io.on("connection", (socket) => {
       io.to(roomId).emit("countdown_start", 3);
       io.to(roomId).emit("room_update", getPublicRoom(room));
     } catch (error: any) {
-      console.error("Game Start Error:", error.response?.data || error.message);
+      console.error("Game Start Error:", error.message || error);
       let errorMsg = error.response?.data?.error?.message || error.message;
       io.to(roomId).emit("error", "Failed to start game: " + errorMsg);
     }

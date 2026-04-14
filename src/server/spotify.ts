@@ -33,8 +33,8 @@ export async function getSpotifyToken() {
     spotifyAccessToken = response.data.access_token;
     spotifyTokenExpiry = Date.now() + response.data.expires_in * 1000 - 60000;
     return spotifyAccessToken;
-  } catch (error) {
-    console.error("Error fetching Spotify token:", error);
+  } catch (error: any) {
+    console.error("Error fetching Spotify token:", error.message || error);
     return null;
   }
 }
@@ -156,8 +156,8 @@ export async function scrapeSpotifyPlaylist(playlistId: string) {
     }
     
     return allTracks;
-  } catch (error) {
-    console.error("Error scraping Spotify playlist via Pathfinder:", error);
+  } catch (error: any) {
+    console.error("Error scraping Spotify playlist via Pathfinder:", error.message || error);
   }
   return null;
 }

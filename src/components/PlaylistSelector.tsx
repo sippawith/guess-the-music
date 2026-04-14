@@ -116,7 +116,7 @@ export function PlaylistSelector() {
       const res = await axios.post('/api/playlist/search', { query: searchQuery });
       setSearchResults(res.data);
     } catch (err: any) {
-      console.error(err);
+      console.error("Search failed:", err.message || err);
       const msg = err.response?.data?.error || err.message;
       actions.clearError();
       useGameStore.setState({ error: `Search failed: ${msg}` });

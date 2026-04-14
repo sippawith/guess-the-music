@@ -81,7 +81,7 @@ async function fetchTMDBDiscover(type: 'movie' | 'tv', params: Record<string, st
     }
     return allResults;
   } catch (error: any) {
-    console.error('TMDB discover error:', error.response?.data || error.message);
+    console.error('TMDB discover error:', error.message || error);
     return [];
   }
 }
@@ -101,7 +101,7 @@ async function searchTMDB(query: string, type: 'movie' | 'tv'): Promise<any | nu
       return results[0];
     }
   } catch (error: any) {
-    console.error(`TMDB search error for "${query}":`, error.response?.data || error.message);
+    console.error(`TMDB search error for "${query}":`, error.message || error);
   }
   return null;
 }
@@ -163,15 +163,22 @@ export async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
 
     // Try to get more from Wikipedia
     try {
-      const wikiPrincesses = await fetchWikipediaCategoryMembers('Disney Princesses');
+      // Use the list page for better accuracy than the category
+      const wikiPrincesses = await fetchWikipediaListFromPage('List of Disney Princesses');
       if (wikiPrincesses.length > 0) {
-        princessTitles = Array.from(new Set([...princessTitles, ...wikiPrincesses]));
+        // Filter for things that look like names/titles and aren't generic Wikipedia links
+        const filtered = wikiPrincesses.filter(t => 
+          t.length > 3 && 
+          !['Disney Princess', 'Walt Disney Pictures', 'Official website'].includes(t)
+        );
+        princessTitles = Array.from(new Set([...princessTitles, ...filtered]));
       }
     } catch (e) {
       console.warn('[TMDB] Wikipedia fetch failed for Disney Princesses, using fallback list');
     }
 
-    const results = await Promise.all(princessTitles.map(name => searchTMDB(name, 'movie')));
+    // Append "Disney" to the search query to avoid horror/parody versions like "The Deadly Little Mermaid"
+    const results = await Promise.all(princessTitles.map(name => searchTMDB(`${name} Disney`, 'movie')));
     return results
       .filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path)
       .map(r => tmdbToTrack(r, 'movie'));
@@ -204,7 +211,7 @@ export async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
 
   // Fallback for other sources if needed
   let showNames = source === 'Cartoon Network' ? CARTOON_NETWORK_SHOWS : NICKELODEON_SHOWS;
-  const searchResults = await Promise.all(showNames.map(name => searchTMDB(name, 'tv')));
+  const searchResults = await Promise.all(showNames.map(name => searchTMDB(`${name} ${source}`, 'tv')));
   const tracks = searchResults
     .filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path)
     .map(r => tmdbToTrack(r, 'tv'));
