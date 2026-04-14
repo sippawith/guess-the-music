@@ -394,10 +394,10 @@ io.on("connection", (socket) => {
           io.to(roomId).emit("game_status", "Fetching music tracks...");
           
           if (customTracks && Array.isArray(customTracks) && customTracks.length > 0) {
-            categoryTracks = customTracks;
+            categoryTracks = customTracks.map(t => ({ ...t, category: "MUSIC" as const }));
           } else if (playlistId && playlistId.includes("music.apple.com")) {
             const scrapedTracks = await scrapeAppleMusicPlaylist(playlistId);
-            if (scrapedTracks) categoryTracks = scrapedTracks;
+            if (scrapedTracks) categoryTracks = scrapedTracks.map(t => ({ ...t, category: "MUSIC" as const }));
           } else if (playlistId) {
             const token = userToken || await getSpotifyToken();
             if (token) {
@@ -553,7 +553,7 @@ io.on("connection", (socket) => {
     Object.values(room.players).forEach(p => p.lastGuess = "");
 
     const currentTrack = room.tracks[room.currentTrackIndex];
-    const effectiveCategory = currentTrack.category || room.categories[0];
+    const effectiveCategory = currentTrack.category || room.categories[0] || "MUSIC";
     console.log(`[Game] Round ${room.currentTrackIndex + 1} | ${effectiveCategory} | "${currentTrack.name}"`);
     
     // Determine guess target
@@ -581,7 +581,13 @@ io.on("connection", (socket) => {
 
       choices = [getChoiceText(currentTrack)];
       
-      const allOtherChoices = Array.from(new Set(room.tracks.map(t => getChoiceText(t))))
+      // STRICT FILTERING: Only use tracks that share the EXACT same category as the current track
+      const sameCategoryTracks = room.tracks.filter(t => {
+        const trackCat = t.category || room.categories[0] || "MUSIC";
+        return trackCat === effectiveCategory;
+      });
+
+      const allOtherChoices = Array.from(new Set(sameCategoryTracks.map(t => getChoiceText(t))))
         .filter(c => c !== choices![0]);
       
       const shuffled = allOtherChoices.sort(() => 0.5 - Math.random());

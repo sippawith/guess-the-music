@@ -1,5 +1,6 @@
 import axios from "axios";
 import { Track } from "./types";
+import { fetchWikipediaCategoryMembers } from "./wikipedia";
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
@@ -15,7 +16,13 @@ const CARTOON_NETWORK_SHOWS = [
   'Tom and Jerry', 'Ben 10', 'The Powerpuff Girls', "Dexter's Laboratory",
   'Samurai Jack', 'Adventure Time', 'Regular Show', 'Courage the Cowardly Dog',
   'Ed, Edd n Eddy', 'Johnny Bravo', 'We Bare Bears', 'Steven Universe',
-  'The Amazing World of Gumball', 'Codename: Kids Next Door',
+  'The Amazing World of Gumball', 'Codename: Kids Next Door', 'Foster\'s Home for Imaginary Friends',
+  'Grim Adventures of Billy & Mandy', 'Teen Titans', 'Chowder', 'The Marvelous Misadventures of Flapjack',
+  'Camp Lazlo', 'My Gym Partner\'s a Monkey', 'Cow and Chicken', 'I Am Weasel', 'Sheep in the Big City',
+  'Robot Jones', 'Megas XLR', 'Hi Hi Puffy AmiYumi', 'The Life and Times of Juniper Lee',
+  'Class of 3000', 'Uncle Grandpa', 'Clarence', 'Over the Garden Wall', 'Infinity Train',
+  'OK K.O.! Let\'s Be Heroes', 'Craig of the Creek', 'Summer Camp Island', 'Victor and Valentino',
+  'Mao Mao: Heroes of Pure Heart', 'The Fungies!', 'Tig n\' Seek'
 ];
 
 const NICKELODEON_SHOWS = [
@@ -23,7 +30,15 @@ const NICKELODEON_SHOWS = [
   'Avatar: The Last Airbender', 'Danny Phantom', 'Jimmy Neutron',
   'Rugrats', 'Hey Arnold!', 'CatDog', 'Invader Zim',
   'The Wild Thornberrys', 'The Loud House', 'PAW Patrol',
-  'Teenage Mutant Ninja Turtles',
+  'Teenage Mutant Ninja Turtles', 'Blue\'s Clues', 'The Ren & Stimpy Show',
+  'Rocko\'s Modern Life', 'Aaahh!!! Real Monsters', 'KaBlam!', 'The Angry Beavers',
+  'Rocket Power', 'As Told by Ginger', 'ChalkZone', 'My Life as a Teenage Robot',
+  'All Grown Up!', 'Danny Phantom', 'Avatar: The Last Airbender', 'The X\'s',
+  'El Tigre: The Adventures of Manny Rivera', 'Back at the Barnyard', 'The Mighty B!',
+  'The Penguins of Madagascar', 'Fanboy & Chum Chum', 'T.U.F.F. Puppy', 'Winx Club',
+  'Kung Fu Panda: Legends of Awesomeness', 'The Legend of Korra', 'Robot and Monster',
+  'Sanjay and Craig', 'Breadwinners', 'Harvey Beaks', 'Pig Goat Banana Cricket',
+  'The Casagrandes', 'It\'s Pony', 'Middlemost Post'
 ];
 
 function getTMDBHeaders(): Record<string, string> | null {
@@ -37,8 +52,22 @@ async function fetchTMDBDiscover(type: 'movie' | 'tv', params: Record<string, st
   if (!headers) return [];
   
   try {
+    // First, get the total number of pages
+    const initialParams = new URLSearchParams({ ...params, page: '1', language });
+    if (!params.sort_by) initialParams.set('sort_by', 'popularity.desc');
+    if (!params['vote_count.gte']) initialParams.set('vote_count.gte', '50');
+    
+    const initialRes = await axios.get(`${TMDB_BASE_URL}/discover/${type}?${initialParams}`, { headers });
+    const totalPages = Math.min(initialRes.data.total_pages || 1, 10); // Cap at 10 pages for diversity vs performance
+    
+    // Pick 3 random pages from the available ones
+    const pagesToFetch = new Set<number>();
+    while (pagesToFetch.size < Math.min(3, totalPages)) {
+      pagesToFetch.add(Math.floor(Math.random() * totalPages) + 1);
+    }
+    
     let allResults: any[] = [];
-    for (let page = 1; page <= 3; page++) {
+    for (const page of Array.from(pagesToFetch)) {
       const queryParams = new URLSearchParams({
         ...params,
         page: page.toString(),
@@ -118,18 +147,30 @@ export async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
   if (source === 'Disney/Pixar') {
     const results = await fetchTMDBDiscover('movie', {
       with_genres: '16',
-      with_companies: '2|3'
+      with_companies: '2|3|6125|521|10342' // Disney, Pixar, Disney Animation, DreamWorks, Studio Ghibli (added some variety)
     });
     return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
   }
 
   if (source === 'Disney Princess') {
-    const princessTitles = [
+    let princessTitles = [
       'Snow White and the Seven Dwarfs', 'Cinderella', 'Sleeping Beauty', 
       'The Little Mermaid', 'Beauty and the Beast', 'Aladdin', 
       'Pocahontas', 'Mulan', 'The Princess and the Frog', 
-      'Tangled', 'Brave', 'Frozen', 'Moana', 'Raya and the Last Dragon'
+      'Tangled', 'Brave', 'Frozen', 'Moana', 'Raya and the Last Dragon',
+      'Encanto', 'Wish', 'The Princess Diaries', 'Ella Enchanted'
     ];
+
+    // Try to get more from Wikipedia
+    try {
+      const wikiPrincesses = await fetchWikipediaCategoryMembers('Disney Princesses');
+      if (wikiPrincesses.length > 0) {
+        princessTitles = Array.from(new Set([...princessTitles, ...wikiPrincesses]));
+      }
+    } catch (e) {
+      console.warn('[TMDB] Wikipedia fetch failed for Disney Princesses, using fallback list');
+    }
+
     const results = await Promise.all(princessTitles.map(name => searchTMDB(name, 'movie')));
     return results
       .filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path)
@@ -153,8 +194,16 @@ export async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
     return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
   }
   
-  // Cartoon Network or Nickelodeon — search for specific shows
-  const showNames = source === 'Cartoon Network' ? CARTOON_NETWORK_SHOWS : NICKELODEON_SHOWS;
+  if (source === 'Cartoon Network' || source === 'Nickelodeon') {
+    const networkId = source === 'Cartoon Network' ? '56' : '13';
+    const results = await fetchTMDBDiscover('tv', {
+      with_networks: networkId
+    });
+    return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'tv'));
+  }
+
+  // Fallback for other sources if needed
+  let showNames = source === 'Cartoon Network' ? CARTOON_NETWORK_SHOWS : NICKELODEON_SHOWS;
   const searchResults = await Promise.all(showNames.map(name => searchTMDB(name, 'tv')));
   const tracks = searchResults
     .filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path)
