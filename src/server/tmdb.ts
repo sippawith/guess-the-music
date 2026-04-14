@@ -163,15 +163,21 @@ export async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
 
     // Try to get more from Wikipedia
     try {
-      // Use the list page for better accuracy than the category
-      const wikiPrincesses = await fetchWikipediaListFromPage('List of Disney Princesses');
+      // "Disney Princess" is the correct main article title
+      const wikiPrincesses = await fetchWikipediaListFromPage('Disney Princess');
       if (wikiPrincesses.length > 0) {
         // Filter for things that look like names/titles and aren't generic Wikipedia links
         const filtered = wikiPrincesses.filter(t => 
           t.length > 3 && 
-          !['Disney Princess', 'Walt Disney Pictures', 'Official website'].includes(t)
+          !['Disney Princess', 'Walt Disney Pictures', 'Official website', 'The Walt Disney Company'].includes(t)
         );
         princessTitles = Array.from(new Set([...princessTitles, ...filtered]));
+      }
+
+      // Also try the category as a secondary source
+      const catPrincesses = await fetchWikipediaCategoryMembers('Disney Princesses');
+      if (catPrincesses.length > 0) {
+        princessTitles = Array.from(new Set([...princessTitles, ...catPrincesses]));
       }
     } catch (e) {
       console.warn('[TMDB] Wikipedia fetch failed for Disney Princesses, using fallback list');
