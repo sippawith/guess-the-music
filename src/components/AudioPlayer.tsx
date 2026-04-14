@@ -3,10 +3,9 @@ import { useGameStore } from '../store';
 import { Volume2 } from 'lucide-react';
 
 export function AudioPlayer() {
-  const { currentTrack, room, actions, isTimerStarted } = useGameStore();
+  const { currentTrack, room, actions, isTimerStarted, isAudioBlocked } = useGameStore();
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [isBlocked, setIsBlocked] = useState(false);
 
   // 1. Handle loading the audio source and notifying readiness
   useEffect(() => {
@@ -80,18 +79,18 @@ export function AudioPlayer() {
   useEffect(() => {
     if (isTimerStarted && audioRef.current && currentTrack) {
       audioRef.current.play().then(() => {
-        setIsBlocked(false);
+        actions.setAudioBlocked(false);
       }).catch(e => {
         console.error("Audio play failed:", e);
-        setIsBlocked(true);
+        actions.setAudioBlocked(true);
       });
     }
-  }, [isTimerStarted, currentTrack]);
+  }, [isTimerStarted, currentTrack, actions]);
 
   const handleUnblock = () => {
     if (audioRef.current) {
       audioRef.current.play().then(() => {
-        setIsBlocked(false);
+        actions.setAudioBlocked(false);
       }).catch(e => console.error("Unblock failed:", e));
     }
   };
@@ -99,7 +98,7 @@ export function AudioPlayer() {
   return (
     <>
       <audio id="main-audio" ref={audioRef} playsInline />
-      {isBlocked && (
+      {isAudioBlocked && (
         <button
           onClick={handleUnblock}
           className="fixed bottom-4 right-4 z-[100] bg-[#1DB954] text-black p-3 rounded-full shadow-lg hover:scale-105 transition-transform"

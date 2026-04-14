@@ -32,6 +32,7 @@ interface LikedTrack {
   albumArt: string;
   imageUrl?: string;
   description?: string;
+  category?: string;
 }
 
 interface Track {
@@ -42,13 +43,14 @@ interface Track {
   albumArt: string;
   imageUrl?: string;
   description?: string;
+  category?: "MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK";
 }
 
 interface Room {
   id: string;
   players: Record<string, Player>;
   state: "LOBBY" | "PLAYING" | "ROUND_END" | "GAME_END";
-  category: "MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK";
+  categories: ("MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK")[];
   settings: {
     guessTime: number;
     numTracks: number;
@@ -92,6 +94,7 @@ interface GameState {
     previewUrl?: string; 
     imageUrl?: string;
     description?: string;
+    category?: "MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK";
     duration: number; 
     startTime?: number; 
     choices?: string[]; 
@@ -117,7 +120,7 @@ interface GameState {
   intermissionEndTime: number | null;
   intermissionDuration: number | null;
   lastRoundResult: {
-    track: { name: string; artist: string; albumArt: string; imageUrl?: string };
+    track: { name: string; artist: string; albumArt: string; imageUrl?: string; previewUrl?: string; category?: string };
     guesses: Record<string, { guess: string; time: number; correct: boolean }>;
     players: Record<string, Player>;
     roundStartTime: number;
@@ -130,6 +133,7 @@ interface GameState {
   // Chat
   chatMessages: ChatMessage[];
   isChatOpen: boolean;
+  isAudioBlocked: boolean;
 
   actions: {
     setSelectedPlaylist: (playlist: { id: string, name: string, image: string, url?: string } | null) => void;
@@ -141,7 +145,7 @@ interface GameState {
     setViewingLobby: (viewing: boolean) => void;
     connect: () => void;
     setName: (name: string) => void;
-    createRoom: (category: Room['category']) => void;
+    createRoom: (categories: Room['categories']) => void;
     joinRoom: (roomId: string) => void;
     updateSettings: (settings: Partial<Room['settings']>) => void;
     startGame: (playlistId: string, trackIds?: string[], customTracks?: Track[]) => void;
@@ -158,6 +162,7 @@ interface GameState {
     sendChatMessage: (message: string) => void;
     toggleChat: () => void;
     setChatOpen: (isOpen: boolean) => void;
+    setAudioBlocked: (isBlocked: boolean) => void;
   };
 }
 
@@ -205,6 +210,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   chatMessages: [],
   isChatOpen: false,
+  isAudioBlocked: false,
 
   actions: {
     setSelectedPlaylist: (playlist) => set({ selectedPlaylist: playlist }),
@@ -215,6 +221,16 @@ export const useGameStore = create<GameState>((set, get) => ({
     setUserToken: (token: string) => set({ userToken: token }),
     setViewingLobby: (viewing: boolean) => set({ viewingLobby: viewing }),
     connect: () => {
+      // Load liked tracks from localStorage
+      const saved = localStorage.getItem('vox_liked_tracks');
+      if (saved) {
+        try {
+          set({ likedTracks: JSON.parse(saved) });
+        } catch (e) {
+          console.error("Failed to load liked tracks", e);
+        }
+      }
+
       const socket = io();
       
       socket.on('room_created', (roomId) => {
@@ -339,10 +355,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     
     setName: (name) => set({ playerName: name }),
     
-    createRoom: (category) => {
+    createRoom: (categories) => {
       const { socket, playerName } = get();
       if (socket && playerName) {
-        socket.emit('create_room', { name: playerName, category });
+        socket.emit('create_room', { name: playerName, categories });
       }
     },
     
@@ -412,14 +428,18 @@ export const useGameStore = create<GameState>((set, get) => ({
         socket.emit('track_ready', { roomId });
       }
     },
-    likeTrack: (track: LikedTrack) => set((state) => ({
-      likedTracks: state.likedTracks.find(t => t.id === track.id) 
-        ? state.likedTracks 
-        : [...state.likedTracks, track]
-    })),
-    unlikeTrack: (trackId: string) => set((state) => ({
-      likedTracks: state.likedTracks.filter(t => t.id !== trackId)
-    })),
+    likeTrack: (track: LikedTrack) => {
+      const { likedTracks } = get();
+      if (likedTracks.find(t => t.id === track.id)) return;
+      const newList = [...likedTracks, track];
+      set({ likedTracks: newList });
+      localStorage.setItem('vox_liked_tracks', JSON.stringify(newList));
+    },
+    unlikeTrack: (trackId: string) => {
+      const newList = get().likedTracks.filter(t => t.id !== trackId);
+      set({ likedTracks: newList });
+      localStorage.setItem('vox_liked_tracks', JSON.stringify(newList));
+    },
     sendChatMessage: (message: string) => {
       const { socket, roomId } = get();
       if (socket && roomId) {
@@ -427,6 +447,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     },
     toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
-    setChatOpen: (isOpen: boolean) => set({ isChatOpen: isOpen })
+    setChatOpen: (isOpen: boolean) => set({ isChatOpen: isOpen }),
+    setAudioBlocked: (isBlocked: boolean) => set({ isAudioBlocked: isBlocked })
   }
 }));

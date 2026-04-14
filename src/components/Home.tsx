@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGameStore } from '../store';
-import { Music, Play, Hash, Fingerprint, Film, Tv, MapPin } from 'lucide-react';
+import { Music, Play, Hash, Fingerprint, Film, Tv, MapPin, Sparkles, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from '../translations';
 
@@ -16,7 +16,15 @@ export function Home() {
   const t = translations.en;
   const [joinCode, setJoinCode] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number] | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const toggleCategory = (id: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(id) 
+        ? prev.filter(c => c !== id) 
+        : [...prev, id]
+    );
+  };
 
   const unlockAudio = () => {
     const audioEl = document.getElementById('main-audio') as HTMLAudioElement;
@@ -128,6 +136,16 @@ export function Home() {
             <Play size={28} fill="currentColor" />
             <span>{t.startNew}</span>
           </button>
+
+          <button
+            onClick={() => {
+              (window as any).showLibrary();
+            }}
+            className="w-full vox-button py-4 text-lg flex items-center justify-center gap-3 bg-vox-white text-vox-black"
+          >
+            <Heart size={20} className="text-vox-red" fill="currentColor" />
+            <span>My Library</span>
+          </button>
         </div>
 
         {/* Right: Info */}
@@ -167,25 +185,24 @@ export function Home() {
               <div className="grid grid-cols-2 gap-4 mb-8">
                 {CATEGORIES.map(cat => {
                   const Icon = cat.icon;
-                  const isSelected = selectedCategory?.id === cat.id;
+                  const isSelected = selectedCategories.includes(cat.id);
                   return (
                     <button
                       key={cat.id}
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`vox-button py-6 flex flex-col items-center gap-3 transition-all ${
+                      onClick={() => toggleCategory(cat.id)}
+                      className={`vox-button py-4 flex flex-col items-center gap-2 transition-all ${
                         isSelected 
                           ? 'selected bg-vox-yellow text-black' 
                           : 'bg-vox-white text-vox-black'
                       }`}
                     >
                       <div 
-                        className="w-12 h-12 border-2 border-vox-black flex items-center justify-center"
+                        className="w-10 h-10 border-2 border-vox-black flex items-center justify-center"
                         style={{ backgroundColor: isSelected ? cat.color : 'transparent' }}
                       >
-                        <Icon size={24} />
+                        <Icon size={20} />
                       </div>
-                      <span className="text-sm font-black uppercase tracking-widest">{cat.name}</span>
-                      <span className="text-[10px] opacity-60 font-medium">{cat.desc}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">{cat.name}</span>
                     </button>
                   );
                 })}
@@ -194,13 +211,13 @@ export function Home() {
               <div className="flex flex-col gap-4">
                 <button
                   onClick={() => {
-                    if (selectedCategory) {
-                      actions.createRoom(selectedCategory.id as any);
+                    if (selectedCategories.length > 0) {
+                      actions.createRoom(selectedCategories as any);
                       setShowCreate(false);
-                      setSelectedCategory(null);
+                      setSelectedCategories([]);
                     }
                   }}
-                  disabled={!selectedCategory}
+                  disabled={selectedCategories.length === 0}
                   className="vox-button py-6 text-xl disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   {t.initializeGame}
@@ -208,7 +225,7 @@ export function Home() {
                 <button
                   onClick={() => {
                     setShowCreate(false);
-                    setSelectedCategory(null);
+                    setSelectedCategories([]);
                   }}
                   className="font-black uppercase tracking-widest text-xs hover:text-vox-red transition-colors text-vox-black"
                 >

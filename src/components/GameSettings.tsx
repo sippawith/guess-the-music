@@ -113,7 +113,7 @@ export function GameSettings() {
             onChange={(val) => actions.updateSettings({ numChoices: val })}
           />
         )}
-        {room.category === 'MUSIC' && (
+        {room.categories.includes('MUSIC') && (
           <div className="space-y-4">
             <div className="flex items-center justify-between mb-2">
               <label className="text-[10px] font-black uppercase tracking-widest opacity-40">{t.guessTarget}</label>

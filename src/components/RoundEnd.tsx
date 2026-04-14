@@ -125,7 +125,7 @@ export function RoundEnd() {
                 >
                   <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
                     <span className="bg-vox-black text-vox-white px-3 py-1 text-[10px] font-black uppercase tracking-widest">
-                      {room.category} {t.identity}
+                      {room.categories[0]} {t.identity}
                     </span>
                     <button
                       onClick={() => {
@@ -133,7 +133,9 @@ export function RoundEnd() {
                           id: track.name + track.artist,
                           name: track.name,
                           artist: track.artist,
-                          albumArt: track.albumArt
+                          albumArt: track.albumArt,
+                          previewUrl: track.previewUrl,
+                          category: track.category || room.categories[0]
                         };
                         const isLiked = likedTracks.some(t => t.id === likedTrack.id);
                         if (isLiked) actions.unlikeTrack(likedTrack.id);
@@ -186,62 +188,76 @@ export function RoundEnd() {
             </div>
             
             <div className="space-y-4 flex-grow">
-              {playersList.map((p, index) => {
-                const guessData = guesses[p.id];
-                const isCorrect = guessData?.correct;
-                const gain = p.score - p.prevScore;
-                
-                return (
-                  <motion.div 
-                    key={p.id}
-                    initial={{ x: 20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 + (index * 0.05) }}
-                    className={`p-4 border-2 border-vox-black transition-all ${isCorrect ? 'bg-vox-yellow/20' : 'bg-vox-paper/50'}`}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 border-2 border-vox-black flex items-center justify-center font-black text-lg ${isCorrect ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}>
-                          {index + 1}
+              <AnimatePresence mode="popLayout">
+                {playersList.map((p, index) => {
+                  const guessData = guesses[p.id];
+                  const isCorrect = guessData?.correct;
+                  const gain = p.score - p.prevScore;
+                  
+                  return (
+                    <motion.div 
+                      key={p.id}
+                      layout
+                      initial={{ x: 20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ delay: 0.3 + (index * 0.05), type: "spring", stiffness: 300, damping: 30 }}
+                      className={`p-4 border-2 border-vox-black transition-all shadow-sm hover:shadow-vox ${isCorrect ? 'bg-vox-yellow/20' : 'bg-vox-paper/50'}`}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 border-2 border-vox-black flex items-center justify-center font-black text-lg ${isCorrect ? 'bg-vox-yellow text-black' : 'bg-vox-white text-vox-black'}`}>
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-black text-lg leading-tight text-vox-black truncate">{p.name}</p>
+                            {p.streak >= 3 && (
+                              <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="flex items-center gap-1 mt-1"
+                              >
+                                <Flame size={12} className="text-vox-red" fill="currentColor" />
+                                <span className="text-[10px] font-black text-vox-red uppercase">{p.streak} {t.streak}</span>
+                              </motion.div>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-lg leading-tight text-vox-black truncate">{p.name}</p>
-                          {p.streak >= 3 && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <Flame size={12} className="text-vox-red" fill="currentColor" />
-                              <span className="text-[10px] font-black text-vox-red uppercase">{p.streak} {t.streak}</span>
-                            </div>
+                        <div className="text-right flex-shrink-0 ml-4">
+                          <p className="font-black text-2xl leading-tight text-vox-black">{p.score}</p>
+                          {gain > 0 && (
+                            <motion.p 
+                              initial={{ y: 10, opacity: 0 }}
+                              animate={{ y: 0, opacity: 1 }}
+                              className="text-[10px] font-black text-vox-red mt-1"
+                            >
+                              +{gain} PTS
+                            </motion.p>
                           )}
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-4">
-                        <p className="font-black text-2xl leading-tight text-vox-black">{p.score}</p>
-                        {gain > 0 && (
-                          <p className="text-[10px] font-black text-vox-red mt-1">+{gain} PTS</p>
+                      
+                      <div className="bg-vox-white border-2 border-vox-black p-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          {isCorrect ? (
+                            <CheckCircle2 size={16} className="text-vox-black flex-shrink-0" />
+                          ) : (
+                            <XCircle size={16} className="text-vox-red flex-shrink-0" />
+                          )}
+                          <span className={`text-sm truncate font-bold text-vox-black ${isCorrect ? "" : "opacity-30 italic"}`}>
+                            {guessData?.guess || t.noGuess}
+                          </span>
+                        </div>
+                        {isCorrect && (
+                          <span className="font-black text-xs ml-4 text-vox-black">
+                            {((guessData.time - lastRoundResult.roundStartTime) / 1000).toFixed(1)}s
+                          </span>
                         )}
                       </div>
-                    </div>
-                    
-                    <div className="bg-vox-white border-2 border-vox-black p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        {isCorrect ? (
-                          <CheckCircle2 size={16} className="text-vox-black flex-shrink-0" />
-                        ) : (
-                          <XCircle size={16} className="text-vox-red flex-shrink-0" />
-                        )}
-                        <span className={`text-sm truncate font-bold text-vox-black ${isCorrect ? "" : "opacity-30 italic"}`}>
-                          {guessData?.guess || t.noGuess}
-                        </span>
-                      </div>
-                      {isCorrect && (
-                        <span className="font-black text-xs ml-4 text-vox-black">
-                          {((guessData.time - lastRoundResult.roundStartTime) / 1000).toFixed(1)}s
-                        </span>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           </div>
         </div>

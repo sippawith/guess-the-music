@@ -24,13 +24,14 @@ export interface Track {
   startTime?: number;
   imageUrl?: string;
   description?: string;
+  category?: "MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK";
 }
 
 export interface Room {
   id: string;
   players: Record<string, Player>;
   state: "LOBBY" | "PLAYING" | "ROUND_END" | "GAME_END";
-  category: "MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK";
+  categories: ("MUSIC" | "MOVIE" | "CARTOON" | "LANDMARK")[];
   settings: {
     guessTime: number;
     numTracks: number;

@@ -260,7 +260,7 @@ function getPublicRoom(room: Room) {
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-  socket.on("create_room", ({ name, category }) => {
+  socket.on("create_room", ({ name, categories }) => {
     const roomId = generateRoomCode();
     rooms[roomId] = {
       id: roomId,
@@ -277,7 +277,7 @@ io.on("connection", (socket) => {
         }
       },
       state: "LOBBY",
-      category: category || "MUSIC",
+      categories: categories || ["MUSIC"],
       hintsUsed: 0,
       settings: { 
         guessTime: 15, 
@@ -383,150 +383,114 @@ io.on("connection", (socket) => {
     try {
       io.to(roomId).emit("game_status", "Initializing Sequence...");
       
-      let tracks: Track[] = [];
+      const allTracks: Track[] = [];
+      const numCategories = room.categories.length;
+      const tracksPerCategory = Math.ceil(room.settings.numTracks / numCategories);
 
-      // --- MUSIC category ---
-      if (room.category === "MUSIC") {
-        io.to(roomId).emit("game_status", "Fetching tracks...");
-        
-        if (customTracks && Array.isArray(customTracks) && customTracks.length > 0) {
-          tracks = customTracks;
-        } else if (playlistId.includes("music.apple.com")) {
-          const scrapedTracks = await scrapeAppleMusicPlaylist(playlistId);
-          if (scrapedTracks) tracks = scrapedTracks;
-        } else {
-          const token = userToken || await getSpotifyToken();
-          if (token && playlistId) {
-            try {
-              let allItems: any[] = [];
-              let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
-              
-              while (nextUrl && allItems.length < 1000) {
-                try {
-                  const response = await axios.get(nextUrl, {
-                    headers: { Authorization: `Bearer ${token}` }
-                  });
-                  if (response.data.items) {
-                    allItems = allItems.concat(response.data.items);
+      for (const category of room.categories) {
+        let categoryTracks: Track[] = [];
+
+        if (category === "MUSIC") {
+          io.to(roomId).emit("game_status", "Fetching music tracks...");
+          
+          if (customTracks && Array.isArray(customTracks) && customTracks.length > 0) {
+            categoryTracks = customTracks;
+          } else if (playlistId && playlistId.includes("music.apple.com")) {
+            const scrapedTracks = await scrapeAppleMusicPlaylist(playlistId);
+            if (scrapedTracks) categoryTracks = scrapedTracks;
+          } else if (playlistId) {
+            const token = userToken || await getSpotifyToken();
+            if (token) {
+              try {
+                let allItems: any[] = [];
+                let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
+                
+                while (nextUrl && allItems.length < 1000) {
+                  try {
+                    const response = await axios.get(nextUrl, {
+                      headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (response.data.items) {
+                      allItems = allItems.concat(response.data.items);
+                    }
+                    nextUrl = response.data.next;
+                  } catch (err: any) {
+                    console.error("Error fetching page:", err.response?.data || err.message);
+                    if (allItems.length === 0) throw err;
+                    break;
                   }
-                  nextUrl = response.data.next;
-                } catch (err: any) {
-                  console.error("Error fetching page:", err.response?.data || err.message);
-                  if (allItems.length === 0) throw err;
-                  break;
                 }
+                
+                if (allItems.length > 0) {
+                  categoryTracks = allItems
+                    .filter((item: any) => item.track)
+                    .map((item: any) => ({
+                      id: item.track.id,
+                      name: item.track.name,
+                      artist: item.track.artists.map((a: any) => a.name).join(", "),
+                      previewUrl: item.track.preview_url || "",
+                      albumArt: item.track.album.images?.[0]?.url || "",
+                      category: "MUSIC" as const
+                    }));
+                }
+              } catch (e) {
+                const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
+                if (scrapedTracks) categoryTracks = scrapedTracks.map(t => ({ ...t, category: "MUSIC" as const }));
               }
-              
-              console.log(`[Music] Fetched ${allItems.length} items from Spotify API`);
-              
-              if (allItems.length > 0) {
-                tracks = allItems
-                  .filter((item: any) => item.track)
-                  .map((item: any) => ({
-                    id: item.track.id,
-                    name: item.track.name,
-                    artist: item.track.artists.map((a: any) => a.name).join(", "),
-                    previewUrl: item.track.preview_url || "",
-                    albumArt: item.track.album.images?.[0]?.url || ""
-                  }));
-              }
-            } catch (e) {
-              console.log("[Music] Falling back to scraper");
+            } else {
               const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
-              if (scrapedTracks) tracks = scrapedTracks;
+              if (scrapedTracks) categoryTracks = scrapedTracks.map(t => ({ ...t, category: "MUSIC" as const }));
             }
-          } else {
-            const scrapedTracks = await scrapeSpotifyPlaylist(playlistId);
-            if (scrapedTracks) tracks = scrapedTracks;
           }
+
+          if (categoryTracks.length > 0) {
+            if (trackIds && Array.isArray(trackIds)) {
+              categoryTracks = categoryTracks.filter(t => trackIds.includes(t.id));
+            }
+            
+            const targetMusicCount = tracksPerCategory;
+            const bufferCount = Math.min(categoryTracks.length, Math.ceil(targetMusicCount * 2.0) + 10);
+            categoryTracks = selectTracksWithSpread(categoryTracks, bufferCount);
+            
+            io.to(roomId).emit("game_status", "Fetching music previews...");
+            const tracksWithPreviews = await Promise.all(categoryTracks.map(async (track) => {
+              const itunesData = await getItunesPreview(track.name, track.artist);
+              return { 
+                ...track, 
+                previewUrl: itunesData?.preview || track.previewUrl || "",
+                albumArt: itunesData?.albumArt || track.albumArt || "",
+                category: "MUSIC" as const
+              };
+            }));
+
+            categoryTracks = tracksWithPreviews
+              .filter(t => t.previewUrl !== "")
+              .slice(0, targetMusicCount);
+          }
+        } else if (category === "MOVIE") {
+          const genre = room.settings.movieGenre || "Action/Drama";
+          io.to(roomId).emit("game_status", `Fetching ${genre} movies...`);
+          const tracks = await fetchMoviesFromTMDB(genre);
+          categoryTracks = selectTracksWithSpread(tracks, tracksPerCategory).map(t => ({ ...t, category: "MOVIE" as const }));
+        } else if (category === "CARTOON") {
+          const source = room.settings.cartoonSource || "Disney/Pixar";
+          io.to(roomId).emit("game_status", `Fetching ${source} cartoons...`);
+          const tracks = await fetchCartoonsFromTMDB(source);
+          categoryTracks = selectTracksWithSpread(tracks, tracksPerCategory).map(t => ({ ...t, category: "CARTOON" as const }));
+        } else if (category === "LANDMARK") {
+          const region = room.settings.landmarkRegion || "Global";
+          io.to(roomId).emit("game_status", `Loading ${region} landmarks...`);
+          const tracks = await prepareLandmarkTracks(region);
+          categoryTracks = selectTracksWithSpread(tracks, tracksPerCategory).map(t => ({ ...t, category: "LANDMARK" as const }));
         }
 
-        if (tracks.length === 0) {
-          io.to(roomId).emit("error", "No tracks found in this playlist.");
-          return;
-        }
-
-        // Filter by trackIds if provided
-        if (trackIds && Array.isArray(trackIds)) {
-          tracks = tracks.filter(t => trackIds.includes(t.id));
-        }
-
-        // Fetch audio previews
-        const targetCount = room.settings.numTracks;
-        const bufferCount = Math.min(tracks.length, Math.ceil(targetCount * 2.0) + 20);
-        
-        tracks = selectTracksWithSpread(tracks, bufferCount);
-        
-        io.to(roomId).emit("game_status", "Fetching previews...");
-        
-        const tracksWithPreviews = await Promise.all(tracks.map(async (track) => {
-          const itunesData = await getItunesPreview(track.name, track.artist);
-          return { 
-            ...track, 
-            previewUrl: itunesData?.preview || track.previewUrl || "",
-            albumArt: itunesData?.albumArt || track.albumArt || ""
-          };
-        }));
-
-        tracks = tracksWithPreviews
-          .filter(t => t.previewUrl !== "")
-          .slice(0, targetCount);
-        
-        console.log(`[Music] Final: ${tracks.length} tracks (target: ${targetCount})`);
-        
-        if (tracks.length === 0) {
-          io.to(roomId).emit("error", "Could not find playable previews for any tracks.");
-          return;
-        }
+        allTracks.push(...categoryTracks);
       }
 
-      // --- MOVIE category ---
-      else if (room.category === "MOVIE") {
-        const genre = room.settings.movieGenre || "Action/Drama";
-        io.to(roomId).emit("game_status", `Fetching ${genre} movies...`);
-        
-        tracks = await fetchMoviesFromTMDB(genre);
-        
-        if (tracks.length === 0) {
-          io.to(roomId).emit("error", "Could not fetch movies. Check TMDB API key in .env");
-          return;
-        }
-        
-        tracks = selectTracksWithSpread(tracks, room.settings.numTracks);
-      }
+      const finalTracks = shuffleArray(allTracks).slice(0, room.settings.numTracks);
 
-      // --- CARTOON category ---
-      else if (room.category === "CARTOON") {
-        const source = room.settings.cartoonSource || "Disney/Pixar";
-        io.to(roomId).emit("game_status", `Fetching ${source} cartoons...`);
-        
-        tracks = await fetchCartoonsFromTMDB(source);
-        
-        if (tracks.length === 0) {
-          io.to(roomId).emit("error", "Could not fetch cartoons. Check TMDB API key in .env");
-          return;
-        }
-        
-        tracks = selectTracksWithSpread(tracks, room.settings.numTracks);
-      }
-
-      // --- LANDMARK category ---
-      else if (room.category === "LANDMARK") {
-        const region = room.settings.landmarkRegion || "Global";
-        io.to(roomId).emit("game_status", `Loading ${region} landmarks...`);
-        
-        tracks = await prepareLandmarkTracks(region);
-        
-        if (tracks.length === 0) {
-          io.to(roomId).emit("error", "Could not load landmarks.");
-          return;
-        }
-        
-        tracks = selectTracksWithSpread(tracks, room.settings.numTracks);
-      }
-
-      if (tracks.length === 0) {
-        io.to(roomId).emit("error", "Could not prepare game content. Please try again.");
+      if (finalTracks.length === 0) {
+        io.to(roomId).emit("error", "Could not prepare game content. Please check your settings.");
         return;
       }
 
@@ -542,7 +506,7 @@ io.on("connection", (socket) => {
         };
       }
 
-      room.tracks = tracks;
+      room.tracks = finalTracks;
       room.currentTrackIndex = 0;
       room.hintsUsed = 0;
       
@@ -589,10 +553,11 @@ io.on("connection", (socket) => {
     Object.values(room.players).forEach(p => p.lastGuess = "");
 
     const currentTrack = room.tracks[room.currentTrackIndex];
-    console.log(`[Game] Round ${room.currentTrackIndex + 1} | ${room.category} | "${currentTrack.name}"`);
+    const effectiveCategory = currentTrack.category || room.categories[0];
+    console.log(`[Game] Round ${room.currentTrackIndex + 1} | ${effectiveCategory} | "${currentTrack.name}"`);
     
     // Determine guess target
-    if (room.category !== "MUSIC") {
+    if (effectiveCategory !== "MUSIC") {
       // Non-music categories always guess the name
       room.roundGuessTarget = "SONG";
     } else if (room.settings.guessTarget === "BOTH") {
@@ -642,6 +607,7 @@ io.on("connection", (socket) => {
       imageUrl: currentTrack.imageUrl || '',
       description: currentTrack.description,
       albumArt: currentTrack.albumArt,
+      category: currentTrack.category,
       duration: room.settings.guessTime,
       startTime: currentTrack.startTime || 30,
       choices,
@@ -707,7 +673,8 @@ io.on("connection", (socket) => {
     const normalizedArtist = currentTrack.artist.toLowerCase().trim();
     
     let isCorrect = false;
-    const target = room.roundGuessTarget || room.settings.guessTarget;
+    const effectiveCategory = currentTrack.category || room.categories[0];
+    const target = effectiveCategory === 'MUSIC' ? (room.roundGuessTarget || room.settings.guessTarget) : 'SONG';
     
     if (room.settings.gameMode === "TYPING") {
       if (target === "SONG") {
@@ -766,10 +733,11 @@ io.on("connection", (socket) => {
 
     const currentTrack = room.tracks[room.currentTrackIndex];
     const target = room.roundGuessTarget;
+    const effectiveCategory = currentTrack.category || room.categories[0];
 
     if (ability === 'hint') {
       let hint = "";
-      if (room.category === "MUSIC") {
+      if (effectiveCategory === "MUSIC") {
         if (target === "SONG") {
           hint = `Artist: ${currentTrack.artist}`;
         } else if (target === "ARTIST") {
@@ -777,9 +745,9 @@ io.on("connection", (socket) => {
         } else {
           hint = `Artist: ${currentTrack.artist.substring(0, 3)}...`;
         }
-      } else if (room.category === "MOVIE" || room.category === "CARTOON") {
+      } else if (effectiveCategory === "MOVIE" || effectiveCategory === "CARTOON") {
         hint = `Year: ${currentTrack.artist}`;
-      } else if (room.category === "LANDMARK") {
+      } else if (effectiveCategory === "LANDMARK") {
         hint = `Country: ${currentTrack.artist}`;
       }
       player.abilities[ability]--;

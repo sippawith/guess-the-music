@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../store';
 import { 
   Users, Copy, Check, Play, Settings, Music, 
-  ArrowLeft, Disc3
+  ArrowLeft, Disc3, Volume2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { translations } from '../translations';
@@ -19,7 +19,11 @@ export function Lobby() {
 
   const isHost = room.players[socket.id]?.isHost;
   const playersList = Object.values(room.players);
-  const isNonMusicCategory = room.category !== 'MUSIC';
+  const hasMusic = room.categories.includes('MUSIC');
+  const hasMovie = room.categories.includes('MOVIE');
+  const hasCartoon = room.categories.includes('CARTOON');
+  const hasLandmark = room.categories.includes('LANDMARK');
+  const isNonMusicOnly = !hasMusic && (hasMovie || hasCartoon || hasLandmark);
 
   const copyCode = () => {
     navigator.clipboard.writeText(room.id);
@@ -35,13 +39,13 @@ export function Lobby() {
       audioEl.play().catch(() => {});
     }
 
-    if (isNonMusicCategory) {
+    if (isNonMusicOnly) {
       // Non-music categories don't need a playlist
-      actions.startGame(room.category, undefined, undefined);
+      actions.startGame('NON_MUSIC', undefined, undefined);
       return;
     }
 
-    if (!selectedPlaylist) return;
+    if (hasMusic && !selectedPlaylist) return;
     
     let trackIds: string[] | undefined = undefined;
     
@@ -73,14 +77,16 @@ export function Lobby() {
       }
     }
 
-    actions.startGame(selectedPlaylist.id, trackIds, undefined);
+    actions.startGame(selectedPlaylist?.id || 'MIXED', trackIds, undefined);
   };
 
-  const canStart = isNonMusicCategory
-    ? (room.category === 'MOVIE' ? !!room.settings.movieGenre : 
-       room.category === 'CARTOON' ? !!room.settings.cartoonSource :
-       room.category === 'LANDMARK' ? true : false)
-    : !!selectedPlaylist;
+  const canStart = (() => {
+    if (hasMusic && !selectedPlaylist) return false;
+    if (hasMovie && !room.settings.movieGenre) return false;
+    if (hasCartoon && !room.settings.cartoonSource) return false;
+    if (hasLandmark && !room.settings.landmarkRegion) return false;
+    return true;
+  })();
 
   return (
     <motion.div 
@@ -160,23 +166,29 @@ export function Lobby() {
             </div>
             
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-              {playersList.map((p) => (
-                <motion.div 
-                  layout
-                  key={p.id} 
-                  className="flex items-center justify-between bg-vox-white border-2 border-vox-black p-4 hover:bg-vox-yellow transition-all group text-vox-black"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 border-2 border-vox-black ${p.isHost ? 'bg-vox-black' : 'bg-vox-paper'}`} />
-                    <span className="font-black text-lg">{p.name}</span>
-                  </div>
-                  {p.isHost && (
-                    <div className="flex flex-col items-end">
-                      <span className="text-[10px] font-black uppercase tracking-widest bg-vox-black text-vox-white px-2 py-0.5">{t.host}</span>
+              <AnimatePresence mode="popLayout">
+                {playersList.map((p, i) => (
+                  <motion.div 
+                    layout
+                    key={p.id} 
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: 20, opacity: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-center justify-between bg-vox-white border-2 border-vox-black p-4 hover:bg-vox-yellow transition-all group text-vox-black shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 border-2 border-vox-black ${p.isHost ? 'bg-vox-black' : 'bg-vox-paper'}`} />
+                      <span className="font-black text-lg">{p.name}</span>
                     </div>
-                  )}
-                </motion.div>
-              ))}
+                    {p.isHost && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-black uppercase tracking-widest bg-vox-black text-vox-white px-2 py-0.5">{t.host}</span>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -199,12 +211,9 @@ export function Lobby() {
               <GameSettings />
 
               {/* Category-Specific Settings */}
-              <div className="mt-12 pt-12 border-t-4 border-vox-black">
-                {room.category === 'MUSIC' ? (
-                  <PlaylistSelector />
-                ) : (
-                  <CategorySettings />
-                )}
+              <div className="mt-12 pt-12 border-t-4 border-vox-black space-y-12">
+                {hasMusic && <PlaylistSelector />}
+                {(hasMovie || hasCartoon || hasLandmark) && <CategorySettings />}
               </div>
             </div>
 
@@ -234,7 +243,23 @@ export function Lobby() {
             </div>
             
             <h2 className="vox-title text-3xl md:text-5xl mb-4 text-vox-black">{t.synchronizing}</h2>
-            <p className="handwritten text-xl md:text-2xl opacity-60 mb-2 text-vox-black">{t.waitingHost}</p>
+            <p className="handwritten text-xl md:text-2xl opacity-60 mb-8 text-vox-black">{t.waitingHost}</p>
+            
+            <button
+              onClick={() => {
+                const audioEl = document.getElementById('main-audio') as HTMLAudioElement;
+                if (audioEl) {
+                  audioEl.src = "data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB";
+                  audioEl.play().then(() => {
+                    actions.setAudioBlocked(false);
+                  }).catch(() => {});
+                }
+              }}
+              className="vox-button bg-vox-yellow text-black px-8 py-4 mb-8 flex items-center gap-3 animate-bounce"
+            >
+              <Volume2 size={24} />
+              <span className="font-black uppercase tracking-widest">Sync Audio for Game</span>
+            </button>
             
             <div className="mt-8 md:mt-16 w-full max-w-md bg-vox-paper border-4 border-vox-black p-4 md:p-8 shadow-vox text-vox-black">
               <div className="flex items-center justify-between mb-4 md:mb-8 border-b-2 border-vox-black pb-4">

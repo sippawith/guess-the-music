@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameStore } from './store';
 import { Home } from './components/Home';
 import { Lobby } from './components/Lobby';
@@ -8,13 +8,16 @@ import { GameEnd } from './components/GameEnd';
 import { Countdown } from './components/Countdown';
 import { AudioPlayer } from './components/AudioPlayer';
 import { Chat } from './components/Chat';
+import { Library } from './components/Library';
 import { AlertCircle, Sun, Moon, Languages } from 'lucide-react';
 
 export default function App() {
   const { room, error, theme, actions, viewingLobby } = useGameStore();
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
 
   useEffect(() => {
     actions.connect();
+    (window as any).showLibrary = () => setIsLibraryOpen(true);
   }, []);
 
   useEffect(() => {
@@ -61,11 +64,17 @@ export default function App() {
 
       <main className="relative z-10 container mx-auto px-4 py-8 min-h-screen flex flex-col items-center justify-center">
         <Countdown />
-        {!room && <Home />}
-        {room && (viewingLobby || room.state === 'LOBBY') && <Lobby />}
-        {room && !viewingLobby && room.state === 'PLAYING' && <Game />}
-        {room && !viewingLobby && room.state === 'ROUND_END' && <RoundEnd />}
-        {room && !viewingLobby && room.state === 'GAME_END' && <GameEnd />}
+        {isLibraryOpen ? (
+          <Library onBack={() => setIsLibraryOpen(false)} />
+        ) : (
+          <>
+            {!room && <Home />}
+            {room && (viewingLobby || room.state === 'LOBBY') && <Lobby />}
+            {room && !viewingLobby && room.state === 'PLAYING' && <Game />}
+            {room && !viewingLobby && room.state === 'ROUND_END' && <RoundEnd />}
+            {room && !viewingLobby && room.state === 'GAME_END' && <GameEnd />}
+          </>
+        )}
       </main>
 
       {/* Chat Component - only show if in a room */}

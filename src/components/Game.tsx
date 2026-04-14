@@ -5,7 +5,7 @@ import { translations } from '../translations';
 import { 
   Send, Sparkles, Lightbulb, CheckCircle2,
   Snowflake, Zap, Flame, ArrowLeft, Scissors,
-  Music, Film, Tv, MapPin
+  Music, Film, Tv, MapPin, Volume2
 } from 'lucide-react';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -16,7 +16,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 export function Game() {
-  const { room, currentTrack, roundEndTime, isTimerStarted, actions, socket } = useGameStore();
+  const { room, currentTrack, roundEndTime, isTimerStarted, actions, socket, isAudioBlocked } = useGameStore();
   const t = translations.en;
   const [guess, setGuess] = useState('');
   const [hasGuessedThisRound, setHasGuessedThisRound] = useState(false);
@@ -29,8 +29,10 @@ export function Game() {
   const me = room?.players[socket?.id || ''];
   const currentRound = (room?.currentTrackIndex || 0) + 1;
   const totalRounds = room?.tracks.length || 10;
-  const isVisualCategory = room?.category !== 'MUSIC';
-  const CategoryIcon = CATEGORY_ICONS[room?.category || 'MUSIC'] || Music;
+  
+  const effectiveCategory = currentTrack?.category || room?.categories[0] || 'MUSIC';
+  const isVisualCategory = effectiveCategory !== 'MUSIC';
+  const CategoryIcon = CATEGORY_ICONS[effectiveCategory] || Music;
 
   useEffect(() => {
     setHasGuessedThisRound(false);
@@ -69,14 +71,14 @@ export function Game() {
 
   const getPrompt = () => {
     const target = room.roundGuessTarget || room.settings.guessTarget;
-    if (room.category === 'MUSIC') {
+    if (effectiveCategory === 'MUSIC') {
       if (target === "SONG") return t.guessSong;
       if (target === "ARTIST") return t.guessArtist;
       return t.guessBoth;
     }
-    if (room.category === 'MOVIE') return t.guessMovie;
-    if (room.category === 'CARTOON') return t.guessCartoon;
-    if (room.category === 'LANDMARK') return t.guessLandmark;
+    if (effectiveCategory === 'MOVIE') return t.guessMovie;
+    if (effectiveCategory === 'CARTOON') return t.guessCartoon;
+    if (effectiveCategory === 'LANDMARK') return t.guessLandmark;
     return t.whatIsThis;
   };
 
@@ -87,6 +89,41 @@ export function Game() {
       exit={{ opacity: 0, y: -20 }}
       className="w-full max-w-5xl px-4 py-2 flex flex-col min-h-screen relative"
     >
+      {/* Audio Blocked Overlay */}
+      <AnimatePresence>
+        {isAudioBlocked && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-vox-black/90 backdrop-blur-sm p-4"
+          >
+            <div className="vox-card max-w-sm w-full text-center p-8 space-y-6">
+              <div className="w-20 h-20 bg-vox-yellow border-4 border-vox-black rounded-full flex items-center justify-center mx-auto animate-bounce">
+                <Volume2 size={40} className="text-vox-black" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="vox-title text-2xl">Audio Blocked</h3>
+                <p className="handwritten text-lg opacity-60">Tap to enable game audio and background music!</p>
+              </div>
+              <button
+                onClick={() => {
+                  const audioEl = document.getElementById('main-audio') as HTMLAudioElement;
+                  if (audioEl) {
+                    audioEl.play().then(() => {
+                      actions.setAudioBlocked(false);
+                    }).catch(() => {});
+                  }
+                }}
+                className="vox-button w-full py-4 text-xl"
+              >
+                Enable Audio
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pt-4">
         <div className="flex items-center gap-4">
@@ -204,13 +241,20 @@ export function Game() {
           <div className="vox-card p-4 bg-vox-yellow relative overflow-visible">
             <div className="tape -bottom-4 -right-4 rotate-12" />
             {(hasGuessedThisRound) ? (
-              <div className="flex flex-col items-center justify-center py-2">
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="flex flex-col items-center justify-center py-2"
+              >
                 <div className="flex items-center gap-3 text-vox-black mb-1">
-                  <CheckCircle2 size={20} />
-                  <span className="font-black text-lg uppercase tracking-tighter">{t.guessTransmitted}</span>
+                  <CheckCircle2 size={24} className="text-vox-black" />
+                  <span className="font-black text-xl uppercase tracking-tighter">{t.guessTransmitted}</span>
+                </div>
+                <div className="bg-vox-black text-vox-white px-3 py-1 text-[10px] font-black uppercase tracking-widest mb-1">
+                  {localGuess}
                 </div>
                 <p className="handwritten text-sm opacity-60 text-vox-black">{t.waitingOthers}</p>
-              </div>
+              </motion.div>
             ) : room.settings.gameMode === 'TYPING' ? (
               <form onSubmit={handleSubmit} className="flex gap-3">
                 <input
