@@ -16,7 +16,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 export function Game() {
-  const { room, currentTrack, roundEndTime, isTimerStarted, actions, socket, isAudioBlocked } = useGameStore();
+  const { room, currentTrack, roundEndTime, isTimerStarted, actions, socket } = useGameStore();
   const t = translations.en;
   const [guess, setGuess] = useState('');
   const [hasGuessedThisRound, setHasGuessedThisRound] = useState(false);
@@ -102,40 +102,6 @@ export function Game() {
       exit={{ opacity: 0, y: -20 }}
       className="w-full max-w-5xl px-4 py-2 flex flex-col min-h-screen relative"
     >
-      {/* Audio Blocked Overlay */}
-      <AnimatePresence>
-        {isAudioBlocked && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-vox-black/90 backdrop-blur-sm p-4"
-          >
-            <div className="vox-card max-w-sm w-full text-center p-8 space-y-6">
-              <div className="w-20 h-20 bg-vox-yellow border-4 border-vox-black rounded-full flex items-center justify-center mx-auto animate-bounce">
-                <Volume2 size={40} className="text-vox-black" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="vox-title text-2xl">Audio Blocked</h3>
-                <p className="handwritten text-lg opacity-60">Tap to enable game audio and background music!</p>
-              </div>
-              <button
-                onClick={() => {
-                  const audioEl = document.getElementById('main-audio') as HTMLAudioElement;
-                  if (audioEl) {
-                    audioEl.play().then(() => {
-                      actions.setAudioBlocked(false);
-                    }).catch(() => {});
-                  }
-                }}
-                className="vox-button w-full py-4 text-xl"
-              >
-                Enable Audio
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pt-4">

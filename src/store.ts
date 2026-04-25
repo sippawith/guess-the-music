@@ -134,7 +134,6 @@ interface GameState {
   // Chat
   chatMessages: ChatMessage[];
   isChatOpen: boolean;
-  isAudioBlocked: boolean;
 
   actions: {
     setSelectedPlaylist: (playlist: { id: string, name: string, image: string, url?: string } | null) => void;
@@ -163,7 +162,6 @@ interface GameState {
     sendChatMessage: (message: string) => void;
     toggleChat: () => void;
     setChatOpen: (isOpen: boolean) => void;
-    setAudioBlocked: (isBlocked: boolean) => void;
   };
 }
 
@@ -211,7 +209,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   
   chatMessages: [],
   isChatOpen: false,
-  isAudioBlocked: false,
 
   actions: {
     setSelectedPlaylist: (playlist) => set({ selectedPlaylist: playlist }),
@@ -448,7 +445,6 @@ export const useGameStore = create<GameState>((set, get) => ({
       }
     },
     toggleChat: () => set((state) => ({ isChatOpen: !state.isChatOpen })),
-    setChatOpen: (isOpen: boolean) => set({ isChatOpen: isOpen }),
-    setAudioBlocked: (isBlocked: boolean) => set({ isAudioBlocked: isBlocked })
+    setChatOpen: (isOpen: boolean) => set({ isChatOpen: isOpen })
   }
 }));

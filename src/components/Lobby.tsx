@@ -245,22 +245,6 @@ export function Lobby() {
             <h2 className="vox-title text-3xl md:text-5xl mb-4 text-vox-black">{t.synchronizing}</h2>
             <p className="handwritten text-xl md:text-2xl opacity-60 mb-8 text-vox-black">{t.waitingHost}</p>
             
-            <button
-              onClick={() => {
-                const audioEl = document.getElementById('main-audio') as HTMLAudioElement;
-                if (audioEl) {
-                  audioEl.src = "data:audio/mp3;base64,//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB//MkxAAQAAAAgAFAAAAAgAAwAAAAB";
-                  audioEl.play().then(() => {
-                    actions.setAudioBlocked(false);
-                  }).catch(() => {});
-                }
-              }}
-              className="vox-button bg-vox-yellow text-black px-8 py-4 mb-8 flex items-center gap-3 animate-bounce"
-            >
-              <Volume2 size={24} />
-              <span className="font-black uppercase tracking-widest">Sync Audio for Game</span>
-            </button>
-            
             <div className="mt-8 md:mt-16 w-full max-w-md bg-vox-paper border-4 border-vox-black p-4 md:p-8 shadow-vox text-vox-black">
               <div className="flex items-center justify-between mb-4 md:mb-8 border-b-2 border-vox-black pb-4">
                 <h4 className="font-black uppercase tracking-widest text-xs">{t.sessionMetadata}</h4>

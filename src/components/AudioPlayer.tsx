@@ -3,7 +3,7 @@ import { useGameStore } from '../store';
 import { Volume2 } from 'lucide-react';
 
 export function AudioPlayer() {
-  const { currentTrack, room, actions, isTimerStarted, isAudioBlocked } = useGameStore();
+  const { currentTrack, room, actions, isTimerStarted } = useGameStore();
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -77,43 +77,16 @@ export function AudioPlayer() {
 
   // 2. Handle actually playing the audio when the timer starts
   useEffect(() => {
-    let isMounted = true;
     if (isTimerStarted && audioRef.current && currentTrack) {
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          if (isMounted) actions.setAudioBlocked(false);
-        }).catch(e => {
-          if (e.name !== 'AbortError') {
-            console.error("Audio play failed:", e);
-            if (isMounted) actions.setAudioBlocked(true);
-          }
-        });
-      }
+      audioRef.current.play().catch(e => {
+        if (e.name !== 'AbortError') {
+          console.warn("Audio auto-play blocked by browser, will play once user interacts.", e);
+        }
+      });
     }
-    return () => { isMounted = false; };
-  }, [isTimerStarted, currentTrack, actions]);
-
-  const handleUnblock = () => {
-    if (audioRef.current) {
-      audioRef.current.play().then(() => {
-        actions.setAudioBlocked(false);
-      }).catch(e => console.error("Unblock failed:", e));
-    }
-  };
+  }, [isTimerStarted, currentTrack]);
 
   return (
-    <>
-      <audio id="main-audio" ref={audioRef} playsInline />
-      {isAudioBlocked && (
-        <button
-          onClick={handleUnblock}
-          className="fixed bottom-4 right-4 z-[100] bg-[#1DB954] text-black p-3 rounded-full shadow-lg hover:scale-105 transition-transform"
-          title="Enable Audio"
-        >
-          <Volume2 size={24} />
-        </button>
-      )}
-    </>
+    <audio id="main-audio" ref={audioRef} playsInline />
   );
 }
