@@ -52,10 +52,14 @@ export function Game() {
 
   // For visual categories, signal "track_ready" when image loads
   useEffect(() => {
-    if (isVisualCategory && imageLoaded) {
-      actions.trackReady();
+    if (isVisualCategory) {
+      // If we have an image URL, wait for it to load.
+      // If we DON'T have an image URL, we are ready immediately.
+      if (imageLoaded || !currentTrack.imageUrl) {
+        actions.trackReady();
+      }
     }
-  }, [isVisualCategory, imageLoaded]);
+  }, [isVisualCategory, imageLoaded, currentTrack.imageUrl]);
 
   if (!room || !currentTrack || !me) return null;
 

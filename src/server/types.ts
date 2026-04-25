@@ -42,6 +42,7 @@ export interface Room {
     numChoices: number;
     movieGenre?: string;
     cartoonSource?: string;
+    cartoonSources?: string[];
     landmarkRegion?: string;
     hintsPerGame: number;
     abilitiesEnabled: boolean;

@@ -473,9 +473,9 @@ io.on("connection", (socket) => {
           const tracks = await fetchMoviesFromTMDB(genre);
           categoryTracks = selectTracksWithSpread(tracks, tracksPerCategory).map(t => ({ ...t, category: "MOVIE" as const }));
         } else if (category === "CARTOON") {
-          const source = room.settings.cartoonSource || "Disney/Pixar";
-          io.to(roomId).emit("game_status", `Fetching ${source} cartoons...`);
-          const tracks = await fetchCartoonsFromTMDB(source);
+          const sources = room.settings.cartoonSources || (room.settings.cartoonSource ? [room.settings.cartoonSource] : ["Disney/Pixar"]);
+          io.to(roomId).emit("game_status", `Fetching ${sources.join(', ')} cartoons...`);
+          const tracks = await fetchCartoonsFromTMDB(sources);
           categoryTracks = selectTracksWithSpread(tracks, tracksPerCategory).map(t => ({ ...t, category: "CARTOON" as const }));
         } else if (category === "LANDMARK") {
           const region = room.settings.landmarkRegion || "Global";

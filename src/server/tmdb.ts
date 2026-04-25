@@ -1,6 +1,6 @@
 import axios from "axios";
 import { Track } from "./types";
-import { fetchWikipediaCategoryMembers } from "./wikipedia";
+import { fetchWikipediaCategoryMembers, fetchWikipediaListFromPage } from "./wikipedia";
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
@@ -39,6 +39,15 @@ const NICKELODEON_SHOWS = [
   'Kung Fu Panda: Legends of Awesomeness', 'The Legend of Korra', 'Robot and Monster',
   'Sanjay and Craig', 'Breadwinners', 'Harvey Beaks', 'Pig Goat Banana Cricket',
   'The Casagrandes', 'It\'s Pony', 'Middlemost Post'
+];
+
+const BOOMERANG_SHOWS = [
+  'Grizzy and the Lemmings', 'Zig & Sharko', 'Mr. Bean: The Animated Series',
+  'Oggy and the Cockroaches', 'The Garfield Show', 'The Tom and Jerry Show',
+  'New Looney Tunes', 'Be Cool, Scooby-Doo!', 'Bunnicula', 'Wacky Races',
+  'Dorothy and the Wizard of Oz', 'Taffy', 'Lamput', 'Pat the Dog',
+  'Mighty Mike', 'The Happos Family', 'Mush-Mush and the Mushables',
+  'Talking Tom and Friends', 'My Goldfish is Evil', 'Camp Lakebottom'
 ];
 
 function getTMDBHeaders(): Record<string, string> | null {
@@ -141,86 +150,81 @@ export async function fetchMoviesFromTMDB(genre: string): Promise<Track[]> {
   return tracks;
 }
 
-export async function fetchCartoonsFromTMDB(source: string): Promise<Track[]> {
-  console.log(`[TMDB] Fetching cartoons for source: ${source}`);
+export async function fetchCartoonsFromTMDB(sourceInput: string | string[]): Promise<Track[]> {
+  const sources = Array.isArray(sourceInput) ? sourceInput : [sourceInput];
+  console.log(`[TMDB] Fetching cartoons for sources: ${sources.join(', ')}`);
   
-  if (source === 'Disney/Pixar') {
-    const results = await fetchTMDBDiscover('movie', {
-      with_genres: '16',
-      with_companies: '2|3|6125|521|10342' // Disney, Pixar, Disney Animation, DreamWorks, Studio Ghibli (added some variety)
-    });
-    return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
-  }
+  let allTracks: Track[] = [];
 
-  if (source === 'Disney Princess') {
-    let princessTitles = [
-      'Snow White and the Seven Dwarfs', 'Cinderella', 'Sleeping Beauty', 
-      'The Little Mermaid', 'Beauty and the Beast', 'Aladdin', 
-      'Pocahontas', 'Mulan', 'The Princess and the Frog', 
-      'Tangled', 'Brave', 'Frozen', 'Moana', 'Raya and the Last Dragon',
-      'Encanto', 'Wish', 'The Princess Diaries', 'Ella Enchanted'
-    ];
+  for (const source of sources) {
+    let sourceTracks: Track[] = [];
 
-    // Try to get more from Wikipedia
-    try {
-      // "Disney Princess" is the correct main article title
-      const wikiPrincesses = await fetchWikipediaListFromPage('Disney Princess');
-      if (wikiPrincesses.length > 0) {
-        // Filter for things that look like names/titles and aren't generic Wikipedia links
-        const filtered = wikiPrincesses.filter(t => 
-          t.length > 3 && 
-          !['Disney Princess', 'Walt Disney Pictures', 'Official website', 'The Walt Disney Company'].includes(t)
-        );
-        princessTitles = Array.from(new Set([...princessTitles, ...filtered]));
+    if (source === 'Disney/Pixar') {
+      const results = await fetchTMDBDiscover('movie', {
+        with_genres: '16',
+        with_companies: '2|3|6125|521|10342'
+      });
+      sourceTracks = results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
+    } else if (source === 'Disney Princess') {
+      let princessTitles = [
+        'Snow White and the Seven Dwarfs', 'Cinderella', 'Sleeping Beauty', 
+        'The Little Mermaid', 'Beauty and the Beast', 'Aladdin', 
+        'Pocahontas', 'Mulan', 'The Princess and the Frog', 
+        'Tangled', 'Brave', 'Frozen', 'Moana', 'Raya and the Last Dragon',
+        'Encanto', 'Wish', 'The Princess Diaries', 'Ella Enchanted'
+      ];
+      try {
+        const wikiPrincesses = await fetchWikipediaListFromPage('Disney Princess');
+        if (wikiPrincesses.length > 0) {
+          const filtered = wikiPrincesses.filter(t => t.length > 3 && !['Disney Princess', 'Walt Disney Pictures', 'Official website', 'The Walt Disney Company'].includes(t));
+          princessTitles = Array.from(new Set([...princessTitles, ...filtered]));
+        }
+        const catPrincesses = await fetchWikipediaCategoryMembers('Disney Princesses');
+        if (catPrincesses.length > 0) {
+          princessTitles = Array.from(new Set([...princessTitles, ...catPrincesses]));
+        }
+      } catch (e) {
+        console.warn('[TMDB] Wikipedia fetch failed for Disney Princesses');
       }
-
-      // Also try the category as a secondary source
-      const catPrincesses = await fetchWikipediaCategoryMembers('Disney Princesses');
-      if (catPrincesses.length > 0) {
-        princessTitles = Array.from(new Set([...princessTitles, ...catPrincesses]));
+      const results = await Promise.all(princessTitles.map(name => searchTMDB(`${name} Disney`, 'movie')));
+      sourceTracks = results.filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path).map(r => tmdbToTrack(r, 'movie'));
+    } else if (source === 'Anime') {
+      const results = await fetchTMDBDiscover('movie', {
+        with_genres: '16',
+        with_original_language: 'ja'
+      });
+      sourceTracks = results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
+    } else if (source === 'Classic 90s') {
+      const results = await fetchTMDBDiscover('movie', {
+        with_genres: '16',
+        'primary_release_date.gte': '1985-01-01',
+        'primary_release_date.lte': '2002-12-31'
+      });
+      sourceTracks = results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
+    } else if (source === 'Cartoon Network' || source === 'Nickelodeon' || source === 'Boomerang') {
+      const networkIds: Record<string, string> = { 'Cartoon Network': '56', 'Nickelodeon': '13', 'Boomerang': '71' };
+      const netId = networkIds[source];
+      if (netId) {
+        const results = await fetchTMDBDiscover('tv', { with_networks: netId });
+        sourceTracks = results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'tv'));
       }
-    } catch (e) {
-      console.warn('[TMDB] Wikipedia fetch failed for Disney Princesses, using fallback list');
+      
+      if (sourceTracks.length < 10) {
+        const fallbacks: Record<string, string[]> = { 'Cartoon Network': CARTOON_NETWORK_SHOWS, 'Nickelodeon': NICKELODEON_SHOWS, 'Boomerang': BOOMERANG_SHOWS };
+        const showNames = fallbacks[source] || [];
+        const searchResults = await Promise.all(showNames.map(name => searchTMDB(`${name} ${source}`, 'tv')));
+        const extraTracks = searchResults.filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path).map(r => tmdbToTrack(r, 'tv'));
+        sourceTracks = [...sourceTracks, ...extraTracks];
+      }
+    } else {
+        // Unknown source
     }
 
-    // Append "Disney" to the search query to avoid horror/parody versions like "The Deadly Little Mermaid"
-    const results = await Promise.all(princessTitles.map(name => searchTMDB(`${name} Disney`, 'movie')));
-    return results
-      .filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path)
-      .map(r => tmdbToTrack(r, 'movie'));
-  }
-  
-  if (source === 'Anime') {
-    const results = await fetchTMDBDiscover('movie', {
-      with_genres: '16',
-      with_original_language: 'ja'
-    });
-    return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
-  }
-  
-  if (source === 'Classic 90s') {
-    const results = await fetchTMDBDiscover('movie', {
-      with_genres: '16',
-      'primary_release_date.gte': '1985-01-01',
-      'primary_release_date.lte': '2002-12-31'
-    });
-    return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'movie'));
-  }
-  
-  if (source === 'Cartoon Network' || source === 'Nickelodeon') {
-    const networkId = source === 'Cartoon Network' ? '56' : '13';
-    const results = await fetchTMDBDiscover('tv', {
-      with_networks: networkId
-    });
-    return results.filter(m => m.poster_path).map(m => tmdbToTrack(m, 'tv'));
+    allTracks = [...allTracks, ...sourceTracks];
   }
 
-  // Fallback for other sources if needed
-  let showNames = source === 'Cartoon Network' ? CARTOON_NETWORK_SHOWS : NICKELODEON_SHOWS;
-  const searchResults = await Promise.all(showNames.map(name => searchTMDB(`${name} ${source}`, 'tv')));
-  const tracks = searchResults
-    .filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path)
-    .map(r => tmdbToTrack(r, 'tv'));
-  console.log(`[TMDB] Found ${tracks.length} cartoons for source: ${source}`);
-  return tracks;
+  // Deduplicate and return
+  const uniqueTracks = Array.from(new Map(allTracks.map(t => [t.id, t])).values());
+  console.log(`[TMDB] Found ${uniqueTracks.length} total cartoons for sources: ${sources.join(', ')}`);
+  return uniqueTracks;
 }
