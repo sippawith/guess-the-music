@@ -52,16 +52,25 @@ export function Game() {
 
   // For visual categories, signal "track_ready" when image loads
   useEffect(() => {
-    if (isVisualCategory) {
+    if (isVisualCategory && currentTrack) {
       // If we have an image URL, wait for it to load.
       // If we DON'T have an image URL, we are ready immediately.
       if (imageLoaded || !currentTrack.imageUrl) {
         actions.trackReady();
       }
     }
-  }, [isVisualCategory, imageLoaded, currentTrack.imageUrl]);
+  }, [isVisualCategory, imageLoaded, currentTrack, actions]);
 
-  if (!room || !currentTrack || !me) return null;
+  if (!room || !me) return null;
+
+  if (!currentTrack) {
+    return (
+      <div className="w-full max-w-5xl px-4 py-8 flex flex-col items-center justify-center min-h-[400px]">
+        <div className="w-16 h-16 border-4 border-vox-black/10 border-t-vox-black rounded-full animate-spin mb-4" />
+        <p className="handwritten text-xl opacity-60">Synchronizing tracks...</p>
+      </div>
+    );
+  }
 
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();

@@ -176,18 +176,40 @@ export async function fetchCartoonsFromTMDB(sourceInput: string | string[]): Pro
       try {
         const wikiPrincesses = await fetchWikipediaListFromPage('Disney Princess');
         if (wikiPrincesses.length > 0) {
-          const filtered = wikiPrincesses.filter(t => t.length > 3 && !['Disney Princess', 'Walt Disney Pictures', 'Official website', 'The Walt Disney Company'].includes(t));
+          // Much stricter filter: only capitalize words, no weird symbols, etc.
+          const filtered = wikiPrincesses.filter(t => 
+            t.length > 3 && 
+            !['Disney Princess', 'Walt Disney Pictures', 'Official website', 'The Walt Disney Company', 'The Little Mermaid', 'Mulan'].includes(t) &&
+            !t.includes(':') && !t.includes('/')
+          ).slice(0, 20); // Limit to top 20 links to avoid overwhelming API
           princessTitles = Array.from(new Set([...princessTitles, ...filtered]));
-        }
-        const catPrincesses = await fetchWikipediaCategoryMembers('Disney Princesses');
-        if (catPrincesses.length > 0) {
-          princessTitles = Array.from(new Set([...princessTitles, ...catPrincesses]));
         }
       } catch (e) {
         console.warn('[TMDB] Wikipedia fetch failed for Disney Princesses');
       }
-      const results = await Promise.all(princessTitles.map(name => searchTMDB(`${name} Disney`, 'movie')));
-      sourceTracks = results.filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path).map(r => tmdbToTrack(r, 'movie'));
+      
+      // Process in batches of 5
+      const searchAll = async (names: string[]) => {
+        const results: any[] = [];
+        for (let i = 0; i < names.length; i += 5) {
+          const batch = names.slice(i, i + 5);
+          const batchResults = await Promise.all(batch.map(name => searchTMDB(`${name} Disney Animation`, 'movie')));
+          results.push(...batchResults);
+        }
+        return results;
+      };
+      
+      const results = await searchAll(princessTitles);
+      sourceTracks = results
+        .filter((r): r is NonNullable<typeof r> => 
+          r !== null && 
+          r.poster_path && 
+          // Anti-horror/parody filter
+          !r.title.toLowerCase().includes('deadly') &&
+          !r.title.toLowerCase().includes('horror') &&
+          !r.title.toLowerCase().includes('parody')
+        )
+        .map(r => tmdbToTrack(r, 'movie'));
     } else if (source === 'Anime') {
       const results = await fetchTMDBDiscover('movie', {
         with_genres: '16',
@@ -212,7 +234,19 @@ export async function fetchCartoonsFromTMDB(sourceInput: string | string[]): Pro
       if (sourceTracks.length < 10) {
         const fallbacks: Record<string, string[]> = { 'Cartoon Network': CARTOON_NETWORK_SHOWS, 'Nickelodeon': NICKELODEON_SHOWS, 'Boomerang': BOOMERANG_SHOWS };
         const showNames = fallbacks[source] || [];
-        const searchResults = await Promise.all(showNames.map(name => searchTMDB(`${name} ${source}`, 'tv')));
+        
+        // Process in batches
+        const searchAll = async (names: string[]) => {
+          const results: any[] = [];
+          for (let i = 0; i < names.length; i += 5) {
+            const batch = names.slice(i, i + 5);
+            const batchResults = await Promise.all(batch.map(name => searchTMDB(`${name} ${source}`, 'tv')));
+            results.push(...batchResults);
+          }
+          return results;
+        };
+        
+        const searchResults = await searchAll(showNames);
         const extraTracks = searchResults.filter((r): r is NonNullable<typeof r> => r !== null && r.poster_path).map(r => tmdbToTrack(r, 'tv'));
         sourceTracks = [...sourceTracks, ...extraTracks];
       }

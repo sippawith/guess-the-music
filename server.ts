@@ -383,11 +383,10 @@ io.on("connection", (socket) => {
     try {
       io.to(roomId).emit("game_status", "Initializing Sequence...");
       
-      const allTracks: Track[] = [];
       const numCategories = room.categories.length;
       const tracksPerCategory = Math.ceil(room.settings.numTracks / numCategories);
 
-      for (const category of room.categories) {
+      const categoryPromises = room.categories.map(async (category) => {
         let categoryTracks: Track[] = [];
 
         if (category === "MUSIC") {
@@ -484,8 +483,11 @@ io.on("connection", (socket) => {
           categoryTracks = selectTracksWithSpread(tracks, tracksPerCategory).map(t => ({ ...t, category: "LANDMARK" as const }));
         }
 
-        allTracks.push(...categoryTracks);
-      }
+        return categoryTracks;
+      });
+
+      const results = await Promise.all(categoryPromises);
+      const allTracks = results.flat();
 
       const finalTracks = shuffleArray(allTracks).slice(0, room.settings.numTracks);
 
